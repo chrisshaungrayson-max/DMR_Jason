@@ -9,12 +9,13 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { NutritionItem, NutritionTotal } from '@/types/nutrition';
 import { generateReportHTML } from '@/utils/pdf';
+import RadarChart from './components/RadarChart';
 
 function ceil(n: number) { return Math.ceil(n || 0); }
 
 export default function ResultsPopover() {
   const params = useLocalSearchParams<{ macros?: string; date?: string; foodList?: string }>();
-  const { colorScheme, user } = useUser();
+  const { colorScheme, user, ideal } = useUser();
   const { dailyRecords } = useNutritionStore();
   const isDarkMode = colorScheme === 'dark';
   const theme = isDarkMode ? Colors.dark : Colors.light;
@@ -23,10 +24,19 @@ export default function ResultsPopover() {
   const { userInfo } = useNutritionStore();
 
   const items: NutritionItem[] = useMemo(() => {
+    const normalize = (arr: any[] = []): NutritionItem[] =>
+      arr.map((it: any) => ({
+        ...it,
+        calories: Number(it?.calories) || 0,
+        protein: Number(it?.protein) || 0,
+        carbs: Number(it?.carbs) || 0,
+        fat: Number(it?.fat) || 0,
+      }));
+
     if (params.macros) {
       try {
         const parsed = JSON.parse(params.macros as string);
-        return parsed.items || [];
+        return normalize(parsed.items || []);
       } catch {
         return [];
       }
@@ -34,26 +44,32 @@ export default function ResultsPopover() {
     if (params.date) {
       const record = dailyRecords.find(r => r.date === params.date);
       if (!record) return [];
-      return record.entries.flatMap(e => e.items);
+      return normalize(record.entries.flatMap(e => e.items));
     }
     return [];
   }, [params.macros, params.date, dailyRecords]);
 
   const totals: NutritionTotal = useMemo(() => {
     return items.reduce<NutritionTotal>((acc, it) => ({
-      calories: acc.calories + (it.calories || 0),
-      protein: acc.protein + (it.protein || 0),
-      carbs: acc.carbs + (it.carbs || 0),
-      fat: acc.fat + (it.fat || 0),
+      calories: acc.calories + (Number(it.calories) || 0),
+      protein: acc.protein + (Number(it.protein) || 0),
+      carbs: acc.carbs + (Number(it.carbs) || 0),
+      fat: acc.fat + (Number(it.fat) || 0),
     }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
   }, [items]);
 
   const totalKcal = useMemo(() => (totals.protein*4 + totals.carbs*4 + totals.fat*9), [totals]);
-  const pct = useMemo(() => ({
-    P: totalKcal ? Math.round((totals.protein*4/totalKcal)*100) : 0,
-    C: totalKcal ? Math.round((totals.carbs*4/totalKcal)*100) : 0,
-    F: totalKcal ? Math.round((totals.fat*9/totalKcal)*100) : 0,
-  }), [totalKcal, totals]);
+  const pct = useMemo(() => {
+    const safe = (n: number) => {
+      if (!isFinite(n)) return 0;
+      return Math.max(0, Math.min(100, Math.round(n)));
+    };
+    return {
+      P: totalKcal > 0 ? safe((totals.protein*4/totalKcal)*100) : 0,
+      C: totalKcal > 0 ? safe((totals.carbs*4/totalKcal)*100) : 0,
+      F: totalKcal > 0 ? safe((totals.fat*9/totalKcal)*100) : 0,
+    };
+  }, [totalKcal, totals]);
 
   const displayDate = useMemo(() => {
     const d = params.date ? new Date(`${params.date}T00:00:00`) : new Date();
@@ -101,11 +117,11 @@ export default function ResultsPopover() {
       <View onStartShouldSetResponder={() => true} style={[styles.modalCard, { backgroundColor: theme.cardBackground }]}>
         <View style={[styles.headerRow, { borderBottomColor: isDarkMode ? '#444' : '#e2e2e2' }]}>
           <Text style={[styles.title, { color: theme.darkText }]}>{displayDate}</Text>
-          <View style={styles.tabRow}>
-            <TouchableOpacity onPress={() => setActiveTab('list')} style={[styles.tabBtn, activeTab === 'list' ? styles.tabActive : null]}>
+          <View style={[styles.tabRow, { backgroundColor: `${theme.lightGold}33` } ]}>
+            <TouchableOpacity onPress={() => setActiveTab('list')} style={[styles.tabBtn, { borderColor: theme.tint }, activeTab === 'list' ? [styles.tabActive, { backgroundColor: theme.tint }] : null]}>
               <Text style={[styles.tabText, { color: activeTab === 'list' ? theme.background : theme.darkText }]}>List</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setActiveTab('analytics')} style={[styles.tabBtn, activeTab === 'analytics' ? styles.tabActive : null]}>
+            <TouchableOpacity onPress={() => setActiveTab('analytics')} style={[styles.tabBtn, { borderColor: theme.tint }, activeTab === 'analytics' ? [styles.tabActive, { backgroundColor: theme.tint }] : null]}>
               <Text style={[styles.tabText, { color: activeTab === 'analytics' ? theme.background : theme.darkText }]}>Analytics</Text>
             </TouchableOpacity>
           </View>
@@ -120,23 +136,25 @@ export default function ResultsPopover() {
                 <Text style={[styles.infoItem, { color: theme.darkText }]}>Method: AI Estimation</Text>
               </View>
 
+              {/* List tab does not show RadarChart */}
+
               <Text style={[styles.description, { color: theme.darkText }]}>Here is a detailed breakdown of your food and drink intake for the day, along with estimated macronutrient values.</Text>
 
               {/* Totals */}
               <View style={styles.totalsRow}>
-                <View style={[styles.totalBox, { backgroundColor: isDarkMode ? '#2e2e2e' : '#F5EEE6' }]}>
+                <View style={[styles.totalBox, { backgroundColor: isDarkMode ? '#2e2e2e' : `${theme.lightGold}33` }]}>
                   <Text style={[styles.totalValue, { color: theme.darkText }]}>{ceil(totals.calories)}</Text>
                   <Text style={[styles.totalLabel, { color: theme.lightText }]}>Calories</Text>
                 </View>
-                <View style={[styles.totalBox, { backgroundColor: isDarkMode ? '#2e2e2e' : '#F5EEE6' }]}>
+                <View style={[styles.totalBox, { backgroundColor: isDarkMode ? '#2e2e2e' : `${theme.lightGold}33` }]}>
                   <Text style={[styles.totalValue, { color: theme.darkText }]}>{ceil(totals.protein)}g</Text>
                   <Text style={[styles.totalLabel, { color: theme.lightText }]}>Protein</Text>
                 </View>
-                <View style={[styles.totalBox, { backgroundColor: isDarkMode ? '#2e2e2e' : '#F5EEE6' }]}>
+                <View style={[styles.totalBox, { backgroundColor: isDarkMode ? '#2e2e2e' : `${theme.lightGold}33` }]}>
                   <Text style={[styles.totalValue, { color: theme.darkText }]}>{ceil(totals.carbs)}g</Text>
                   <Text style={[styles.totalLabel, { color: theme.lightText }]}>Carbs</Text>
                 </View>
-                <View style={[styles.totalBox, { backgroundColor: isDarkMode ? '#2e2e2e' : '#F5EEE6' }]}>
+                <View style={[styles.totalBox, { backgroundColor: isDarkMode ? '#2e2e2e' : `${theme.lightGold}33` }]}>
                   <Text style={[styles.totalValue, { color: theme.darkText }]}>{ceil(totals.fat)}g</Text>
                   <Text style={[styles.totalLabel, { color: theme.lightText }]}>Fat</Text>
                 </View>
@@ -144,7 +162,7 @@ export default function ResultsPopover() {
 
               {/* Table */}
               <View style={styles.tableContainer}>
-                <View style={styles.tableHeader}>
+                <View style={[styles.tableHeader, { backgroundColor: theme.tint }]}>
                   <Text style={[styles.tableHeaderCell, styles.itemColumn]}>Item</Text>
                   <Text style={[styles.tableHeaderCell, styles.macroColumn]}>Calories</Text>
                   <Text style={[styles.tableHeaderCell, styles.macroColumn]}>Protein (g)</Text>
@@ -175,17 +193,38 @@ export default function ResultsPopover() {
               {/* Analytics */}
               <View style={styles.analyticsSection}>
                 <Text style={[styles.sectionTitle, { color: theme.darkText }]}>Macro Distribution</Text>
+                {/* Radar: Ideal vs Actual */}
+                <View style={[styles.analyticsSection, { backgroundColor: `${theme.lightGold}33`, alignItems: 'center' }]}>
+                  <RadarChart
+                    size={220}
+                    values={{ protein: pct.P, carbs: pct.C, fat: pct.F }}
+                    ideal={{ protein: ideal.percents.protein, carbs: ideal.percents.carbs, fat: ideal.percents.fat }}
+                    // Brand-aligned styling
+                    color={theme.tint}
+                    dashColor={theme.lightGold}
+                    brandPrimary={theme.tint}
+                    brandAccent={theme.lightGold}
+                    labelColor={theme.darkText}
+                    backgroundColor={'transparent'}
+                    gridColor={isDarkMode ? '#3A3A3A' : '#BFC6CF'}
+                    strokeWidth={2}
+                    gridWidth={1}
+                    curveTension={0.55}
+                    fillOpacity={0.18}
+                    showGradientBg
+                  />
+                </View>
                 <View style={styles.pctRow}>
                   <View style={styles.pctItem}>
-                    <View style={[styles.pctBar, { width: `${pct.P}%`, backgroundColor: '#BBA46E' }]} />
+                    <View style={[styles.pctBar, { width: `${pct.P}%`, backgroundColor: theme.tint }]} />
                     <Text style={[styles.pctLabel, { color: theme.lightText }]}>Protein {pct.P}%</Text>
                   </View>
                   <View style={styles.pctItem}>
-                    <View style={[styles.pctBar, { width: `${pct.C}%`, backgroundColor: '#8bc34a' }]} />
+                    <View style={[styles.pctBar, { width: `${pct.C}%`, backgroundColor: theme.tint }]} />
                     <Text style={[styles.pctLabel, { color: theme.lightText }]}>Carbs {pct.C}%</Text>
                   </View>
                   <View style={styles.pctItem}>
-                    <View style={[styles.pctBar, { width: `${pct.F}%`, backgroundColor: '#ff9800' }]} />
+                    <View style={[styles.pctBar, { width: `${pct.F}%`, backgroundColor: theme.tint }]} />
                     <Text style={[styles.pctLabel, { color: theme.lightText }]}>Fat {pct.F}%</Text>
                   </View>
                 </View>
@@ -197,8 +236,8 @@ export default function ResultsPopover() {
                     return (
                       <View key={label} style={styles.barItem}>
                         <Text style={styles.barValue}>{Math.max(Math.round(value), 0)}%</Text>
-                        <View style={styles.barContainer}>
-                          <View style={[styles.bar, { height: `${Math.max(value, 5)}%`, backgroundColor: '#BBA46E' }]} />
+                        <View style={[styles.barContainer, { backgroundColor: `${theme.lightGold}33` }]}>
+                          <View style={[styles.bar, { height: `${Math.max(value, 5)}%`, backgroundColor: theme.tint }]} />
                         </View>
                         <Text style={styles.barLabel}>{label}</Text>
                       </View>

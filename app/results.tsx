@@ -11,9 +11,12 @@ import * as Haptics from 'expo-haptics';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { generateReportHTML } from '@/utils/pdf';
+import RadarChart from './components/RadarChart';
+import { useUser } from '@/store/user-store';
 
 export default function ResultsScreen() {
   const { userInfo, addNutritionEntry } = useNutritionStore();
+  const { ideal } = useUser();
   const [nutritionData, setNutritionData] = useState<NutritionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,15 @@ export default function ResultsScreen() {
       console.error('Date formatting error:', error);
       return 'Invalid Date';
     }
+  };
+
+  const getMacroPercents = (totals: any) => {
+    const totalKcal = totals.protein * 4 + totals.carbs * 4 + totals.fat * 9;
+    return {
+      protein: totalKcal ? Math.round((totals.protein * 4 / totalKcal) * 100) : 0,
+      carbs: totalKcal ? Math.round((totals.carbs * 4 / totalKcal) * 100) : 0,
+      fat: totalKcal ? Math.round((totals.fat * 9 / totalKcal) * 100) : 0,
+    };
   };
   
   const currentDate = formatDateForDisplay(date || new Date().toISOString().split('T')[0]);
@@ -139,283 +151,11 @@ export default function ResultsScreen() {
     const totals = calculateTotals();
     const calorieStatus = getCalorieStatus(totals.calories);
     
-    const tableRows = nutritionData.map((item, index) => `
-      <tr style="background-color: ${index % 2 === 0 ? '#F5F5F5' : '#F5EEE6'}; border-bottom: 1px solid #eee;">
-        <td style="padding: 12px; text-align: left; font-size: 14px;">${item.name}</td>
-        <td style="padding: 12px; text-align: center; font-size: 14px;">${Math.ceil(item.calories)}</td>
-        <td style="padding: 12px; text-align: center; font-size: 14px;">${Math.ceil(item.protein)}</td>
-        <td style="padding: 12px; text-align: center; font-size: 14px;">${Math.ceil(item.carbs)}</td>
-        <td style="padding: 12px; text-align: center; font-size: 14px;">${Math.ceil(item.fat)}</td>
-      </tr>
-    `).join('');
-
-    const macroData = getPieData(totals);
-    const macroBreakdown = macroData.map(item => `
-      <div style="display: flex; align-items: center; margin-bottom: 12px;">
-        <div style="width: 20px; height: 20px; background-color: ${item.color}; border-radius: 50%; margin-right: 12px;"></div>
-        <span style="font-size: 16px; color: #333; font-weight: 500;">${item.name}: ${item.population}%</span>
-      </div>
-    `).join('');
-
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>${userInfo.name}'s Daily Macros Report</title>
-          <style>
-            body {
-              font-family: Helvetica, Arial, sans-serif;
-              background-color: #EEE7DF;
-              margin: 0;
-              padding: 20px;
-              color: #000;
-            }
-            .container {
-              max-width: 800px;
-              margin: 0 auto;
-              background-color: #EEE7DF;
-            }
-            .header {
-              display: flex;
-              align-items: center;
-              margin-bottom: 30px;
-              padding-bottom: 15px;
-              border-bottom: 1px solid #e0e0e0;
-            }
-            .logo {
-              width: 60px;
-              height: 60px;
-              margin-right: 15px;
-              border-radius: 8px;
-            }
-            .title-container {
-              flex: 1;
-            }
-            .brand-text {
-              font-size: 14px;
-              font-weight: bold;
-              color: #000;
-              letter-spacing: 0.5px;
-              margin-bottom: 4px;
-            }
-            .title {
-              font-size: 18px;
-              font-weight: bold;
-              color: #000;
-              margin: 0;
-            }
-            .date {
-              font-size: 14px;
-              color: #333;
-              margin-top: 4px;
-            }
-            .info-container {
-              margin-bottom: 20px;
-            }
-            .info-item {
-              font-size: 16px;
-              margin-bottom: 6px;
-            }
-            .description {
-              font-size: 16px;
-              margin-bottom: 20px;
-              line-height: 1.5;
-            }
-            .table-container {
-              border-radius: 8px;
-              overflow: hidden;
-              margin-bottom: 20px;
-              border: 1px solid #ddd;
-            }
-            .table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            .table-header {
-              background-color: #BBA46E;
-            }
-            .table-header th {
-              color: #fff;
-              font-weight: bold;
-              font-size: 14px;
-              padding: 12px;
-              text-align: left;
-            }
-            .table-header th:not(:first-child) {
-              text-align: center;
-            }
-            .total-row {
-              background-color: #3C3C3C;
-            }
-            .total-row td {
-              color: #fff;
-              font-weight: bold;
-              font-size: 14px;
-              padding: 12px;
-            }
-            .total-row td:not(:first-child) {
-              text-align: center;
-            }
-            .note {
-              font-size: 14px;
-              font-style: italic;
-              color: #666;
-              margin-bottom: 30px;
-            }
-            .analytics-section {
-              margin-top: 30px;
-              page-break-before: always;
-            }
-            .calorie-status {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              background-color: #fff;
-              padding: 24px;
-              border-radius: 12px;
-              margin-bottom: 24px;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            .calorie-info h3 {
-              font-size: 16px;
-              color: #666;
-              margin: 0 0 4px 0;
-            }
-            .calorie-value {
-              font-size: 32px;
-              font-weight: bold;
-              color: #333;
-              margin: 0;
-            }
-            .status-badge {
-              padding: 8px 16px;
-              border-radius: 20px;
-              color: #fff;
-              font-weight: bold;
-              background-color: ${calorieStatus.color};
-            }
-            .chart-section {
-              background-color: #fff;
-              border-radius: 12px;
-              margin-bottom: 24px;
-              padding: 20px;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            .chart-title {
-              font-size: 18px;
-              font-weight: bold;
-              color: #333;
-              margin-bottom: 16px;
-              text-align: center;
-            }
-            .macro-summary {
-              display: flex;
-              justify-content: space-around;
-              background-color: #fff;
-              padding: 24px;
-              border-radius: 12px;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            .macro-item {
-              text-align: center;
-            }
-            .macro-label {
-              font-size: 14px;
-              color: #666;
-              margin-bottom: 4px;
-            }
-            .macro-value {
-              font-size: 20px;
-              font-weight: bold;
-              color: #333;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <img src="https://r2-pub.rork.com/attachments/nbnzfjpejlkyi4jjvjdzc" class="logo" alt="Logo" />
-              <div class="title-container">
-                <div class="brand-text">DMR by Jason Lam PT</div>
-                <h1 class="title">${userInfo.name.toUpperCase()}'S DAILY MACROS</h1>
-                <div class="date">${currentDate}</div>
-              </div>
-            </div>
-            
-            <div class="info-container">
-              <div class="info-item">Name: ${userInfo.name}</div>
-              <div class="info-item">Goal: Daily Intake Overview</div>
-              <div class="info-item">Method: AI Estimation</div>
-            </div>
-            
-            <div class="description">
-              Here is a detailed breakdown of your food and drink intake for the day, along with estimated macronutrient values.
-            </div>
-            
-            <div class="table-container">
-              <table class="table">
-                <thead class="table-header">
-                  <tr>
-                    <th>Item</th>
-                    <th>Calories</th>
-                    <th>Protein (g)</th>
-                    <th>Carbs (g)</th>
-                    <th>Fat (g)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${tableRows}
-                  <tr class="total-row">
-                    <td>TOTAL</td>
-                    <td style="text-align: center;">${Math.ceil(totals.calories)}</td>
-                    <td style="text-align: center;">${Math.ceil(totals.protein)}</td>
-                    <td style="text-align: center;">${Math.ceil(totals.carbs)}</td>
-                    <td style="text-align: center;">${Math.ceil(totals.fat)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            
-            <div class="note">
-              Note: These values are based on average nutritional data and portion size estimations. Individual ingredients or preparation methods may vary.
-            </div>
-            
-            <div class="analytics-section">
-              <div class="calorie-status">
-                <div class="calorie-info">
-                  <h3>Total Calories</h3>
-                  <div class="calorie-value">${Math.ceil(totals.calories)}</div>
-                </div>
-                <div class="status-badge">
-                  ${calorieStatus.status === 'over' ? 'Over Target' : calorieStatus.status === 'under' ? 'Under Target' : 'On Track'}
-                </div>
-              </div>
-              
-              <div class="chart-section">
-                <div class="chart-title">Macro Distribution</div>
-                ${macroBreakdown}
-              </div>
-              
-              <div class="macro-summary">
-                <div class="macro-item">
-                  <div class="macro-label">Protein</div>
-                  <div class="macro-value">${Math.ceil(totals.protein)}g</div>
-                </div>
-                <div class="macro-item">
-                  <div class="macro-label">Carbs</div>
-                  <div class="macro-value">${Math.ceil(totals.carbs)}g</div>
-                </div>
-                <div class="macro-item">
-                  <div class="macro-label">Fat</div>
-                  <div class="macro-value">${Math.ceil(totals.fat)}g</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+    return generateReportHTML(
+      userInfo.name,
+      currentDate,
+      nutritionData
+    );
   };
 
   const handleExportPDF = async () => {
@@ -428,7 +168,7 @@ export default function ResultsScreen() {
     // Use shared PDF generator for consistent exports
     const htmlContent = generateReportHTML(
       userInfo.name,
-      formatDateForDisplay(date),
+      currentDate,
       nutritionData
     );
       
@@ -677,18 +417,27 @@ export default function ResultsScreen() {
               </View>
             </View>
             
+            <Text style={styles.chartTitle}>Macro Balance (Radar)</Text>
+            <View style={styles.chartContainer}>
+              <RadarChart 
+                values={getMacroPercents(totals)} 
+                ideal={{ protein: ideal.percents.protein, carbs: ideal.percents.carbs, fat: ideal.percents.fat }} 
+                size={260}
+              />
+            </View>
+            
             <View style={styles.macroSummary}>
               <View style={styles.macroItem}>
                 <Text style={styles.macroLabel}>Protein</Text>
-                <Text style={styles.macroValue}>{totals.protein}g</Text>
+                <Text style={styles.macroValue}>{Math.ceil(totals.protein)}g</Text>
               </View>
               <View style={styles.macroItem}>
                 <Text style={styles.macroLabel}>Carbs</Text>
-                <Text style={styles.macroValue}>{totals.carbs}g</Text>
+                <Text style={styles.macroValue}>{Math.ceil(totals.carbs)}g</Text>
               </View>
               <View style={styles.macroItem}>
                 <Text style={styles.macroLabel}>Fat</Text>
-                <Text style={styles.macroValue}>{totals.fat}g</Text>
+                <Text style={styles.macroValue}>{Math.ceil(totals.fat)}g</Text>
               </View>
             </View>
           </View>

@@ -11,7 +11,8 @@ import {
   TouchableWithoutFeedback, 
   Dimensions,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  FlatList
 } from 'react-native';
 
 const { height } = Dimensions.get('window');
@@ -20,6 +21,7 @@ import { useUser } from '@/store/user-store';
 import Colors from '@/constants/colors';
 import { analyzeFoodEntry, formatNutritionalInfo, type NutritionalInfo } from '@/services/foodAnalysis';
 import CustomDatePicker from './CustomDatePicker';
+import { useFoodsStore } from '@/store/foods-store';
 
 
 
@@ -36,8 +38,11 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<NutritionalInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
   
   const { colorScheme } = useUser();
+  const { search: searchFoods, save: saveFood } = useFoodsStore();
   const isDarkMode = colorScheme === 'dark';
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const inputRef = useRef<TextInput>(null);
@@ -51,6 +56,27 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
       return () => clearTimeout(timer);
     }
   }, [visible]);
+
+  // Debounced search for foods catalog suggestions
+  useEffect(() => {
+    let timer: any;
+    if (foodText.trim().length >= 2 && !isAnalyzing) {
+      setSearching(true);
+      timer = setTimeout(async () => {
+        try {
+          const res = await searchFoods(foodText.trim());
+          setSuggestions(res);
+        } catch {
+          setSuggestions([]);
+        } finally {
+          setSearching(false);
+        }
+      }, 250);
+    } else {
+      setSuggestions([]);
+    }
+    return () => clearTimeout(timer);
+  }, [foodText, isAnalyzing, searchFoods]);
 
   const handleDateChange = (date: Date) => {
     setSelectedDate(date);
@@ -77,6 +103,28 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
         'Nutritional Analysis',
         formatNutritionalInfo(result),
         [
+          {
+            text: 'Save to My Foods',
+            onPress: async () => {
+              try {
+                await saveFood({
+                  name: result.food || foodText,
+                  brand: undefined,
+                  portion: result.servingSize,
+                  calories: result.calories,
+                  protein: result.protein,
+                  carbs: result.carbs,
+                  fat: result.fat,
+                  tags: [],
+                  meta: { source: 'analysis' },
+                } as any);
+                Alert.alert('Saved', 'Food saved to your catalog.');
+              } catch (e) {
+                console.warn('Save food failed', e);
+                Alert.alert('Error', 'Failed to save.');
+              }
+            },
+          },
           {
             text: 'Cancel',
             style: 'cancel',
@@ -293,6 +341,35 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
       backgroundColor: theme.cardBackground,
       color: theme.text,
       borderColor: theme.border,
+    },
+    suggestionsBox: {
+      marginTop: 8,
+      borderWidth: 1,
+      borderRadius: 8,
+      overflow: 'hidden',
+    },
+    suggestionLoadingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 8,
+      gap: 6,
+    },
+    suggestionLoadingText: {
+      fontSize: 12,
+    },
+    suggestionItem: {
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(0,0,0,0.05)',
+    },
+    suggestionText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    suggestionMeta: {
+      fontSize: 12,
+      marginTop: 2,
     },
     dateButton: {
       flexDirection: 'row',

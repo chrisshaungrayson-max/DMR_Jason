@@ -10,6 +10,29 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { user, updateUser, logout, colorScheme } = useUser();
   const isDarkMode = colorScheme === 'dark';
+  // helpers for unit conversion
+  const parseImperialHeightToCm = (h: string): number => {
+    const m = h.match(/([0-9]+)'\s*([0-9]+)"?/);
+    if (!m) return Math.round(parseFloat(h) || 170);
+    const feet = parseInt(m[1]);
+    const inches = parseInt(m[2]);
+    return Math.round(feet * 30.48 + inches * 2.54);
+  };
+  const cmToImperialString = (cmInput: string | number): string => {
+    const cm = Math.round(typeof cmInput === 'string' ? parseFloat(cmInput) || 170 : cmInput);
+    const totalInches = Math.round(cm / 2.54);
+    const feet = Math.floor(totalInches / 12);
+    const inches = totalInches % 12;
+    return `${feet}'${inches}"`;
+  };
+  const lbsToKg = (lbsInput: string | number): number => {
+    const lbs = typeof lbsInput === 'string' ? parseFloat(lbsInput) || 160 : lbsInput;
+    return Math.round((lbs / 2.205) * 10) / 10;
+  };
+  const kgToLbs = (kgInput: string | number): number => {
+    const kg = typeof kgInput === 'string' ? parseFloat(kgInput) || 70 : kgInput;
+    return Math.round(kg * 2.205);
+  };
   
   const handleLogout = () => {
     Alert.alert(
@@ -32,7 +55,17 @@ export default function SettingsScreen() {
   };
   
   const toggleMetricUnits = async () => {
-    await updateUser({ useMetricUnits: !user.useMetricUnits });
+    if (!user.useMetricUnits) {
+      // Imperial -> Metric
+      const cm = parseImperialHeightToCm(user.height);
+      const kg = lbsToKg(user.weight);
+      await updateUser({ useMetricUnits: true, height: String(cm), weight: String(kg) });
+    } else {
+      // Metric -> Imperial
+      const ftin = cmToImperialString(user.height);
+      const lbs = kgToLbs(user.weight);
+      await updateUser({ useMetricUnits: false, height: ftin, weight: `${lbs} lbs` });
+    }
   };
 
   const navigateTo = (path: string) => {

@@ -48,3 +48,19 @@ A running changelog of notable changes. Times are local.
   - Timestamps/meal type derivation for entries; legacy entries migrated.
   - Utility helpers added (categorizeMealByHour, combineDateWithNow).
 
+
+## 2025-08-15 12:38:08+08:00
+- Summary
+  - Brought up Expo dev server with tunnel, resolved install conflicts, and fixed profile/settings unit handling and an errant auth navigation.
+- Features/Changes
+  - Linked “Use Metric Units” setting between `app/(tabs)/profile.tsx` and `app/(tabs)/settings.tsx` via `useUser().updateUser()`.
+  - Added unit conversion helpers (cm/inches, kg/lbs) and applied instant conversion when toggling units.
+  - Displayed units alongside values in Profile when metric is active (e.g., `cm`, `kg`).
+- Fixes/Polish
+  - Fixed `ReferenceError: updatePhoto` by moving `updatePhoto()` to component scope in `app/(tabs)/profile.tsx`.
+  - Removed “Manage Account” button in Profile Edit that navigated to `/auth`, which caused the unexpected auth screen after saving.
+  - Resolved npm peer conflict by installing with `--legacy-peer-deps`; started Expo with `--tunnel`.
+  - Handled Ngrok tunnel reconnection; server continues to run with Expo Go QR.
+- Notes
+  - Some Expo package versions are slightly behind the expected range; consider upgrading to the versions suggested by the Expo CLI for best compatibility.
+

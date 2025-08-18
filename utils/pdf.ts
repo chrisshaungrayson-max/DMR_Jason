@@ -1,4 +1,5 @@
 import { NutritionItem } from '@/types/nutrition';
+import Colors from '@/constants/colors';
 
 // Shared HTML generator to ensure PDF exports are identical across the app
 export function generateReportHTML(name: string, dateLabel: string, nutritionData: NutritionItem[]) {
@@ -67,7 +68,7 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
   const calorieStatus = getCalorieStatus(totals.calories);
 
   const tableRows = nutritionData.map((item, index) => `
-    <tr style="background-color: ${index % 2 === 0 ? '#FFFFFF' : '#F5EEE6'};">
+    <tr style="background-color: ${index % 2 === 0 ? '#FFFFFF' : '#F7F2EA'};">
       <td style="padding: 12px; text-align: left; font-size: 14px; color:#333;">${item.name}</td>
       <td style="padding: 12px; text-align: center; font-size: 14px; color:#333;">${Math.ceil(item.calories)}</td>
       <td style="padding: 12px; text-align: center; font-size: 14px; color:#333;">${Math.ceil(item.protein)}</td>
@@ -77,8 +78,8 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
   `).join('');
 
   const totalsRow = `
-    <tr style="background-color:#333333; color:#ffffff; font-weight:800;">
-      <td style="padding: 12px; text-align: left;">Total</td>
+    <tr style="background-color:#2B2B2B; color:#ffffff; font-weight:800;">
+      <td style="padding: 12px; text-align: left;">TOTAL</td>
       <td style="padding: 12px; text-align: center;">${Math.ceil(totals.calories)}</td>
       <td style="padding: 12px; text-align: center;">${Math.ceil(totals.protein)}</td>
       <td style="padding: 12px; text-align: center;">${Math.ceil(totals.carbs)}</td>
@@ -109,37 +110,48 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
     </div>
   `).join('');
 
+  // Brand palette
+  const gold = Colors.light.gold; // "#b8a369"
+  const lightBg = '#F2EBE3';
+  const tableBorder = '#e0d6c7';
+
   return `
   <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; color: #333; }
-        .container { max-width: 800px; margin: 24px auto; padding: 24px; background-color: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
-        .subtitle { font-size: 14px; color: #666; margin: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: ${lightBg}; color: #333; }
+        .container { max-width: 800px; margin: 24px auto; padding: 24px; background-color: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+        .header { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid ${tableBorder}; }
+        .logo { width: 56px; height: 56px; border-radius: 8px; object-fit: contain; }
+        .titleBlock { display: flex; flex-direction: column; }
+        .brand { font-size: 12px; font-weight: 800; color: #333; letter-spacing: .3px; margin: 0 0 2px 0; }
+        .title { font-size: 22px; font-weight: 800; color: #333; margin: 0; }
+        .subtitle { font-size: 13px; color: #666; margin: 2px 0 0 0; }
         .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 16px 0; }
-        .totalCard { background-color: #F5EEE6; border-radius: 12px; padding: 16px; text-align: center; }
+        .totalCard { background-color: ${lightBg}; border-radius: 12px; padding: 16px; text-align: center; border: 1px solid ${tableBorder}; }
         .totalValue { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
         .totalLabel { font-size: 12px; color: #666; margin: 6px 0 0 0; }
-        .calorieCard { display: flex; justify-content: space-between; align-items: center; background-color: #fff3e0; border-radius: 12px; padding: 16px; margin: 16px 0; }
+        .calorieCard { display: flex; justify-content: space-between; align-items: center; background-color: #fff; border: 1px solid ${tableBorder}; border-radius: 12px; padding: 16px; margin: 16px 0; }
         .calorie-info h3 { font-size: 16px; color: #666; margin: 0 0 4px 0; }
         .calorie-value { font-size: 32px; font-weight: bold; color: #333; margin: 0; }
         .status-badge { padding: 8px 16px; border-radius: 20px; color: #fff; font-weight: bold; background-color: ${calorieStatus.color}; }
-        .chart-section { background-color: #fff; border-radius: 12px; margin: 16px 0; padding: 16px; border: 1px solid #eee; }
+        .chart-section { background-color: #fff; border-radius: 12px; margin: 16px 0; padding: 16px; border: 1px solid ${tableBorder}; }
         .section-title { font-size: 18px; font-weight: bold; color: #333; margin: 0 0 16px 0; }
-        .tableWrap { border-radius: 12px; border: 1px solid #e0d6c7; overflow: hidden; margin-top: 12px; }
+        .tableWrap { border-radius: 12px; border: 1px solid ${tableBorder}; overflow: hidden; margin-top: 12px; }
         table { width: 100%; border-collapse: collapse; }
-        thead tr { background-color: #BBA46E; }
+        thead tr { background-color: ${gold}; }
         th { color: #fff; text-align: left; padding: 12px; font-size: 12px; font-weight: 700; }
         td { padding: 12px; font-size: 14px; }
+        .footnote { font-size: 12px; color: #666; font-style: italic; margin-top: 8px; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div>
+          <img class="logo" src="https://r2-pub.rork.com/attachments/nbnzfjpejlkyi4jjvjdzc" alt="Brand Logo" />
+          <div class="titleBlock">
+            <div class="brand">DMR by Jason Lam PT</div>
             <h1 class="title">${name.toUpperCase()}'S DAILY MACROS</h1>
             <p class="subtitle">${dateLabel}</p>
           </div>
@@ -201,6 +213,7 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
             </tbody>
           </table>
           </div>
+          <div class="footnote">Note: These values are based on average nutritional data and portion size estimations. Individual ingredients or preparation methods may vary.</div>
         </div>
       </div>
     </body>

@@ -1,12 +1,21 @@
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, Pressable, ScrollView, Switch, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, Pressable, ScrollView, Switch, Alert, Platform, Image } from 'react-native';
 import React, { useState, useMemo } from 'react';
 import { useUser } from '@/store/user-store';
+import { useGoals } from '@/store/goals-store';
 import Colors from '@/constants/colors';
 import { UserInfo } from '@/types/user';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadAvatarAsync } from '@/services/storage';
+import CustomDatePicker from '@/app/components/CustomDatePicker';
+import type { GoalType } from '@/types/goal';
+import { validateGoalInput } from '@/store/goals-helpers';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, updateUser, logout, colorScheme } = useUser();
+  const { goals, archived, isLoading: goalsLoading, error: goalsError, topNActive, refreshProgress, createGoal, setActive, deactivate, deleteGoal } = useGoals();
   const isDarkMode = colorScheme === 'dark';
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -14,6 +23,117 @@ export default function ProfileScreen() {
   const [editValue, setEditValue] = useState('');
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [formData, setFormData] = useState<UserInfo>({ ...user });
+
+  // --- Goal creation state (5.2) ---
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const [createVisible, setCreateVisible] = useState(false);
+  const [goalType, setGoalType] = useState<GoalType>('calorie_streak');
+  const [startDateISO] = useState<string>(todayISO); // auto start today, non-editable
+  const [endDateISO, setEndDateISO] = useState<string>(todayISO);
+  const [endPickerVisible, setEndPickerVisible] = useState(false);
+  // type-specific params
+  const [bodyFatTargetPct, setBodyFatTargetPct] = useState('15');
+  const [weightTargetKg, setWeightTargetKg] = useState('75');
+  const [weightDirection, setWeightDirection] = useState<'down' | 'up'>('down');
+  const [leanGainKg, setLeanGainKg] = useState('2');
+  const [calStreakDays, setCalStreakDays] = useState('14');
+  const [calBasis, setCalBasis] = useState<'recommended' | 'custom'>('recommended');
+  const [calMin, setCalMin] = useState('');
+  const [calMax, setCalMax] = useState('');
+  const [proteinPerDay, setProteinPerDay] = useState('140');
+  const [proteinDays, setProteinDays] = useState('14');
+  const [creatingGoal, setCreatingGoal] = useState(false);
+
+  const resetCreateState = () => {
+    setGoalType('calorie_streak');
+    setEndDateISO(todayISO);
+    setBodyFatTargetPct('15');
+    setWeightTargetKg('75');
+    setWeightDirection('down');
+    setLeanGainKg('2');
+    setCalStreakDays('14');
+    setCalBasis('recommended');
+    setCalMin('');
+    setCalMax('');
+    setProteinPerDay('140');
+    setProteinDays('14');
+  };
+
+  const onOpenCreate = () => {
+    resetCreateState();
+    setCreateVisible(true);
+  };
+
+  const onConfirmCreate = async () => {
+    try {
+      const result = validateGoalInput({
+        goalType,
+        startDateISO,
+        endDateISO,
+        fields: {
+          bodyFatTargetPct,
+          weightTargetKg,
+          weightDirection,
+          leanGainKg,
+          calStreakDays,
+          calBasis,
+          calMin,
+          calMax,
+          proteinPerDay,
+          proteinDays,
+        },
+      });
+      if (!result.ok) {
+        Alert.alert('Check your inputs', result.message);
+        return;
+      }
+      setCreatingGoal(true);
+      await createGoal({
+        type: goalType,
+        params: result.params,
+        start_date: startDateISO,
+        end_date: endDateISO!,
+        active: true,
+      });
+      setCreateVisible(false);
+      Alert.alert('Goal created', 'Nice work. Your new goal is live!');
+    } catch (e: any) {
+      const msg = String(e?.message || '').toLowerCase();
+      if (msg.includes('conflict') || msg.includes('active') || msg.includes('23505')) {
+        Alert.alert('Already have one running', 'You can only have one active goal of this type. Deactivate the current one first.');
+      } else {
+        Alert.alert('Could not create goal', e?.message ?? 'Unknown error.');
+      }
+    } finally {
+      setCreatingGoal(false);
+    }
+  };
+
+  // Update profile photo (component scope)
+  const updatePhoto = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('Permission required', 'We need access to your photo library to update your avatar.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      });
+      if (result.canceled) return;
+      const asset = result.assets?.[0];
+      if (!asset?.uri) return;
+      const publicUrl = await uploadAvatarAsync(asset.uri, asset.mimeType || 'image/jpeg');
+      await updateUser({ profilePicture: publicUrl });
+      Alert.alert('Updated', 'Profile photo updated.');
+    } catch (e) {
+      console.error('Avatar update failed', e);
+      Alert.alert('Error', 'Failed to update profile photo.');
+    }
+  };
 
   // Calculate TDEE (Total Daily Energy Expenditure) using Mifflin-St Jeor Equation
   const tdee = useMemo(() => {
@@ -65,6 +185,33 @@ export default function ProfileScreen() {
     // Calculate TDEE
     return Math.round(bmr * multiplier);
   }, [user]);
+
+  // --- Unit conversion helpers ---
+  const parseImperialHeightToCm = (h: string): number => {
+    const m = h.match(/([0-9]+)'\s*([0-9]+)"?/);
+    if (!m) return Math.round(parseFloat(h) || 170);
+    const feet = parseInt(m[1]);
+    const inches = parseInt(m[2]);
+    return Math.round(feet * 30.48 + inches * 2.54);
+  };
+
+  const cmToImperialString = (cmInput: string | number): string => {
+    const cm = Math.round(typeof cmInput === 'string' ? parseFloat(cmInput) || 170 : cmInput);
+    const totalInches = Math.round(cm / 2.54);
+    const feet = Math.floor(totalInches / 12);
+    const inches = totalInches % 12;
+    return `${feet}'${inches}"`;
+  };
+
+  const lbsToKg = (lbsInput: string | number): number => {
+    const lbs = typeof lbsInput === 'string' ? parseFloat(lbsInput) || 160 : lbsInput;
+    return Math.round((lbs / 2.205) * 10) / 10; // 1 decimal
+  };
+
+  const kgToLbs = (kgInput: string | number): number => {
+    const kg = typeof kgInput === 'string' ? parseFloat(kgInput) || 70 : kgInput;
+    return Math.round(kg * 2.205);
+  };
 
   const openEditModal = (field: keyof UserInfo, currentValue: string) => {
     setEditingField(field);
@@ -124,10 +271,25 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.profileHeader}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>JD</Text>
-          </View>
+          {user.profilePicture ? (
+            <Image source={{ uri: user.profilePicture }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {(user.name || 'J D')
+                  .split(' ')
+                  .map((s) => s.charAt(0))
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </Text>
+            </View>
+          )}
         </View>
+
+        <TouchableOpacity onPress={updatePhoto} style={styles.updatePhotoButton}>
+          <Text style={styles.updatePhotoText}>Update Photo</Text>
+        </TouchableOpacity>
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.bio}>Fitness enthusiast, tracking my nutrition journey</Text>
         <TouchableOpacity 
@@ -137,6 +299,269 @@ export default function ProfileScreen() {
           <Text style={styles.editProfileText}>Edit Profile</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Goal Management */}
+      <View style={styles.infoSection}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.sectionTitle}>Goal Management</Text>
+          <TouchableOpacity onPress={onOpenCreate} style={[styles.refreshGoalsButton, { backgroundColor: Colors.light.darkText }]}> 
+            <Text style={styles.refreshGoalsText}>Create Goal</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.noticeBox}>
+          <Text style={styles.noticeTitle}>Heads up</Text>
+          <Text style={styles.noticeText}>Goals cannot be edited after creation. To make changes, delete and recreate the goal.</Text>
+        </View>
+        {goalsLoading ? (
+          <Text style={styles.infoValue}>Loading goals…</Text>
+        ) : goalsError ? (
+          <Text style={[styles.infoValue, { color: 'crimson' }]}>{goalsError}</Text>
+        ) : (
+          <>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Active Goals</Text>
+              <Text style={styles.infoValue}>{goals.length}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Archived Goals</Text>
+              <Text style={styles.infoValue}>{archived.length}</Text>
+            </View>
+            {goals.length > 0 && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={[styles.infoLabel, { marginBottom: 8 }]}>Top Goals</Text>
+                {topNActive(3).map((g) => (
+                  <View key={g.id} style={styles.goalRow}>
+                    <Text style={styles.goalTitle}>{g.type.replaceAll('_', ' ')}</Text>
+                    <Text style={styles.goalMeta}>From {g.start_date} to {g.end_date || '—'}</Text>
+                    <View style={styles.goalActionsRow}>
+                      <TouchableOpacity onPress={() => deactivate(g.id)} style={styles.goalActionButton}>
+                        <Text style={styles.goalActionText}>Deactivate</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Active goals list with Deactivate */}
+            {goals.length > 0 && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={[styles.infoLabel, { marginBottom: 8 }]}>Active</Text>
+                {goals.map((g) => (
+                  <View key={g.id} style={styles.goalRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.goalTitle}>{g.type.replaceAll('_', ' ')}</Text>
+                      <Text style={styles.goalMeta}>From {g.start_date} to {g.end_date || '—'}</Text>
+                    </View>
+                    <View style={styles.goalActionsRow}>
+                      <TouchableOpacity onPress={() => deactivate(g.id)} style={styles.goalActionButton}>
+                        <Text style={styles.goalActionText}>Deactivate</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Archived goals list with Activate/Delete */}
+            {archived.length > 0 && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={[styles.infoLabel, { marginBottom: 8 }]}>Archived</Text>
+                {archived.map((g) => (
+                  <View key={g.id} style={styles.goalRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.goalTitle}>{g.type.replaceAll('_', ' ')}</Text>
+                      <Text style={styles.goalMeta}>Ended {g.end_date || '—'}</Text>
+                    </View>
+                    <View style={styles.goalActionsRow}>
+                      <TouchableOpacity onPress={() => setActive(g.id)} style={styles.goalActionButton}>
+                        <Text style={styles.goalActionText}>Activate</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() =>
+                          Alert.alert('Delete goal', 'This cannot be undone. Delete this goal?', [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Delete', style: 'destructive', onPress: () => deleteGoal(g.id) },
+                          ])
+                        }
+                        style={[styles.goalActionButton, styles.deleteButton]}
+                      >
+                        <Text style={[styles.goalActionText, { color: '#fff' }]}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.refreshGoalsButton} onPress={() => refreshProgress()}>
+              <Text style={styles.refreshGoalsText}>Refresh Goal Progress</Text>
+            </TouchableOpacity>
+            <Text style={styles.goalHint}>Tip: Goals are not editable. Delete and recreate to change details.</Text>
+          </>
+        )}
+      </View>
+
+      {/* Create Goal Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={createVisible}
+        onRequestClose={() => setCreateVisible(false)}
+      >
+        <View style={styles.fullModalOverlay}>
+          <View style={[styles.fullModalContainer, { backgroundColor: theme.cardBackground }]}> 
+            <View style={styles.modalHeader}>
+              <Text style={styles.fullModalTitle}>Create Goal</Text>
+              <Pressable style={styles.closeButton} onPress={() => setCreateVisible(false)}>
+                <Text style={styles.closeButtonText}>✕</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.formScrollView}>
+              <View style={styles.formSection}>
+                <Text style={styles.formSectionTitle}>Basics</Text>
+                <Text style={styles.formLabel}>Type</Text>
+                <View style={styles.pickerContainer}>
+                  {(['calorie_streak','protein_streak','body_fat','weight','lean_mass_gain'] as GoalType[]).map((t) => (
+                    <TouchableOpacity
+                      key={t}
+                      style={[styles.activityButton, goalType === t && styles.activityButtonSelected]}
+                      onPress={() => setGoalType(t)}
+                    >
+                      <Text style={[styles.activityButtonText, goalType === t && styles.activityTextSelected]}>
+                        {t.replaceAll('_',' ')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <View style={[styles.formField, { marginTop: 12 }]}>
+                  <Text style={styles.formLabel}>Start Date</Text>
+                  <Text style={styles.infoValue}>{startDateISO} (auto)</Text>
+                </View>
+
+                <View style={styles.formField}>
+                  <Text style={styles.formLabel}>End Date</Text>
+                  <TouchableOpacity onPress={() => setEndPickerVisible(true)} style={styles.formInput}>
+                    <Text style={{ color: Colors.light.darkText }}>{endDateISO}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {goalType === 'body_fat' && (
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Body Fat Goal</Text>
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Target %</Text>
+                    <TextInput value={bodyFatTargetPct} onChangeText={setBodyFatTargetPct} keyboardType="numeric" style={styles.formInput} />
+                  </View>
+                </View>
+              )}
+
+              {goalType === 'weight' && (
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Weight Goal</Text>
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Target Weight (kg)</Text>
+                    <TextInput value={weightTargetKg} onChangeText={setWeightTargetKg} keyboardType="numeric" style={styles.formInput} />
+                  </View>
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Direction</Text>
+                    <View style={styles.pickerContainer}>
+                      {(['down','up'] as const).map((d) => (
+                        <TouchableOpacity key={d} style={[styles.activityButton, weightDirection === d && styles.activityButtonSelected]} onPress={() => setWeightDirection(d)}>
+                          <Text style={[styles.activityButtonText, weightDirection === d && styles.activityTextSelected]}>{d === 'down' ? 'Lose' : 'Gain'}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {goalType === 'lean_mass_gain' && (
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Lean Mass Gain</Text>
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Target Gain (kg)</Text>
+                    <TextInput value={leanGainKg} onChangeText={setLeanGainKg} keyboardType="numeric" style={styles.formInput} />
+                  </View>
+                </View>
+              )}
+
+              {goalType === 'calorie_streak' && (
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Calorie Streak</Text>
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Target Days</Text>
+                    <TextInput value={calStreakDays} onChangeText={setCalStreakDays} keyboardType="numeric" style={styles.formInput} />
+                  </View>
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Basis</Text>
+                    <View style={styles.pickerContainer}>
+                      {(['recommended','custom'] as const).map((b) => (
+                        <TouchableOpacity key={b} style={[styles.activityButton, calBasis === b && styles.activityButtonSelected]} onPress={() => setCalBasis(b)}>
+                          <Text style={[styles.activityButtonText, calBasis === b && styles.activityTextSelected]}>{b}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  {calBasis === 'custom' && (
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <View style={[styles.formField, { flex: 1 }]}>
+                        <Text style={styles.formLabel}>Min Calories</Text>
+                        <TextInput value={calMin} onChangeText={setCalMin} keyboardType="numeric" style={styles.formInput} />
+                      </View>
+                      <View style={[styles.formField, { flex: 1 }]}>
+                        <Text style={styles.formLabel}>Max Calories</Text>
+                        <TextInput value={calMax} onChangeText={setCalMax} keyboardType="numeric" style={styles.formInput} />
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {goalType === 'protein_streak' && (
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Protein Streak</Text>
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Grams / Day</Text>
+                    <TextInput value={proteinPerDay} onChangeText={setProteinPerDay} keyboardType="numeric" style={styles.formInput} />
+                  </View>
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Target Days</Text>
+                    <TextInput value={proteinDays} onChangeText={setProteinDays} keyboardType="numeric" style={styles.formInput} />
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.formActions}>
+                <TouchableOpacity
+                  onPress={onConfirmCreate}
+                  disabled={creatingGoal}
+                  style={[
+                    styles.saveProfileButton,
+                    { width: '100%', opacity: creatingGoal ? 0.7 : 1 },
+                  ]}
+                >
+                  <Text style={styles.saveProfileButtonText}>
+                    {creatingGoal ? 'Creating…' : 'Create Goal'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <CustomDatePicker
+        visible={endPickerVisible}
+        date={new Date(endDateISO + 'T00:00:00')}
+        onDateChange={(d) => setEndDateISO(d.toISOString().slice(0, 10))}
+        onClose={() => setEndPickerVisible(false)}
+        minimumDate={new Date(todayISO + 'T00:00:00')}
+      />
+      
       
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
@@ -157,7 +582,9 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Personal Information</Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Height</Text>
-          <Text style={styles.infoValue}>{user.height}</Text>
+          <Text style={styles.infoValue}>
+            {user.useMetricUnits ? `${user.height} cm` : user.height}
+          </Text>
             <TouchableOpacity 
               style={styles.editIcon}
               onPress={() => openEditModal('height', user.height)}
@@ -167,7 +594,9 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Weight</Text>
-          <Text style={styles.infoValue}>{user.weight}</Text>
+          <Text style={styles.infoValue}>
+            {user.useMetricUnits ? `${user.weight} kg` : user.weight}
+          </Text>
             <TouchableOpacity 
               style={styles.editIcon}
               onPress={() => openEditModal('weight', user.weight)}
@@ -403,6 +832,7 @@ export default function ProfileScreen() {
                     value={formData.height}
                     onChangeText={(value) => handleFormChange('height', value)}
                     placeholder={formData.useMetricUnits ? "Height in cm" : "Height in ft/in"}
+                    keyboardType={formData.useMetricUnits ? 'numeric' : 'default'}
                   />
                 </View>
 
@@ -413,6 +843,7 @@ export default function ProfileScreen() {
                     value={formData.weight}
                     onChangeText={(value) => handleFormChange('weight', value)}
                     placeholder={formData.useMetricUnits ? "Weight in kg" : "Weight in lbs"}
+                    keyboardType='numeric'
                   />
                 </View>
 
@@ -468,7 +899,24 @@ export default function ProfileScreen() {
                     <Text style={styles.formLabel}>Use Metric Units</Text>
                     <Switch
                       value={formData.useMetricUnits}
-                      onValueChange={(value) => handleFormChange('useMetricUnits', value)}
+                      onValueChange={async (value) => {
+                        // Convert values and sync to global user immediately
+                        if (value) {
+                          // Imperial -> Metric
+                          const cm = parseImperialHeightToCm(formData.height);
+                          const kg = lbsToKg(formData.weight);
+                          const updated = { ...formData, useMetricUnits: true, height: String(cm), weight: String(kg) };
+                          setFormData(updated);
+                          await updateUser({ useMetricUnits: true, height: String(cm), weight: String(kg) });
+                        } else {
+                          // Metric -> Imperial
+                          const ftin = cmToImperialString(formData.height);
+                          const lbs = kgToLbs(formData.weight);
+                          const updated = { ...formData, useMetricUnits: false, height: ftin, weight: `${lbs} lbs` };
+                          setFormData(updated);
+                          await updateUser({ useMetricUnits: false, height: ftin, weight: `${lbs} lbs` });
+                        }
+                      }}
                       trackColor={{ false: isDarkMode ? '#555' : '#767577', true: theme.lightGold }}
                       thumbColor={formData.useMetricUnits ? theme.gold : isDarkMode ? '#777' : '#f4f3f4'}
                     />
@@ -623,10 +1071,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
   avatarText: {
     fontSize: 36,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  updatePhotoButton: {
+    marginTop: 8,
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  updatePhotoText: {
+    color: Colors.light.darkText,
+    fontSize: 12,
   },
   name: {
     fontSize: 24,
@@ -846,5 +1312,80 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // --- Goal management styles ---
+  goalRow: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
+  goalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.light.darkText,
+  },
+  goalMeta: {
+    fontSize: 12,
+    color: Colors.light.lightText,
+  },
+  goalActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 6,
+  },
+  goalActionButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: '#fff',
+    marginLeft: 8,
+  },
+  goalActionText: {
+    color: Colors.light.darkText,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  deleteButton: {
+    backgroundColor: '#e74c3c',
+    borderColor: '#e74c3c',
+  },
+  refreshGoalsButton: {
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: Colors.light.gold,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  refreshGoalsText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  goalHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: Colors.light.lightText,
+  },
+  noticeBox: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#FFF8E7',
+    borderWidth: 1,
+    borderColor: Colors.light.gold,
+  },
+  noticeTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.light.darkText,
+    marginBottom: 4,
+  },
+  noticeText: {
+    fontSize: 12,
+    color: Colors.light.lightText,
+    lineHeight: 18,
   },
 });

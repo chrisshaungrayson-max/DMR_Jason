@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NutritionProvider } from "@/store/nutrition-store";
 import { UserContext, useUser } from "@/store/user-store";
 import { StatusBar } from "expo-status-bar";
+import { supabase } from "@/lib/supabaseClient";
+import { FoodsProvider } from "@/store/foods-store";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -14,14 +16,35 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   const { colorScheme } = useUser();
-  
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getUser().then((res: any) => {
+      const { data, error } = res || {};
+      if (!mounted) return;
+      setIsAuthed(!!data.user && !error);
+    }).catch(() => setIsAuthed(false));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      setIsAuthed(!!session?.user);
+    });
+    return () => { mounted = false; sub.subscription.unsubscribe(); };
+  }, []);
+
   return (
     <>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="phone-verification" options={{ headerShown: false }} />
-        <Stack.Screen name="results" options={{ headerShown: false }} />
+        {isAuthed ? (
+          <>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="phone-verification" options={{ headerShown: false }} />
+            <Stack.Screen name="results" options={{ headerShown: false }} />
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+          </>
+        ) : (
+          <Stack.Screen name="auth" options={{ headerShown: false }} />
+        )}
       </Stack>
     </>
   );
@@ -36,9 +59,11 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <UserContext>
         <NutritionProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
+          <FoodsProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </FoodsProvider>
         </NutritionProvider>
       </UserContext>
     </QueryClientProvider>
