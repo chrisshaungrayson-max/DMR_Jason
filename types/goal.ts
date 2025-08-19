@@ -148,3 +148,7 @@ export const MIN_WEEKLY_MEASUREMENTS = 2 as const;
 
 // ISO week starts on Monday (1 = Monday per ISO-8601)
 export const ISO_WEEK_START_DOW = 1 as const;
+
+// Minimum number of weekly average points required before a numeric goal
+// can be considered achieved (prevents premature achievement on too little data)
+export const MIN_TREND_WEEKS_FOR_ACHIEVEMENT = 2 as const;

@@ -9,6 +9,7 @@ import {
   deleteGoal as svcDeleteGoal,
   getGoalProgress as svcGetGoalProgress,
 } from '@/services/goals';
+import { events } from '@/utils/events';
 
 export type GoalsState = {
   goals: GoalRecord[];
@@ -100,6 +101,11 @@ export const [GoalsContext, useGoals] = createContextHook<GoalsStore>(() => {
 
   const setActive: GoalsActions['setActive'] = async (goalId) => {
     setError(undefined);
+    // Prevent activating achieved goals (read-only)
+    const target = [...goals, ...archived].find((g) => g.id === goalId);
+    if (target && target.status === 'achieved') {
+      throw new Error('This goal has been achieved and is read-only. Create a new goal to continue.');
+    }
     const updated = await svcSetActiveGoal(goalId);
     await loadGoals();
     return updated;
@@ -107,6 +113,11 @@ export const [GoalsContext, useGoals] = createContextHook<GoalsStore>(() => {
 
   const deactivate: GoalsActions['deactivate'] = async (goalId) => {
     setError(undefined);
+    // Prevent deactivating achieved goals (already archived/read-only)
+    const target = [...goals, ...archived].find((g) => g.id === goalId);
+    if (target && target.status === 'achieved') {
+      throw new Error('This goal has been achieved and cannot be modified.');
+    }
     const updated = await svcDeactivateGoal(goalId);
     await loadGoals();
     return updated;
@@ -137,6 +148,16 @@ export const [GoalsContext, useGoals] = createContextHook<GoalsStore>(() => {
       for (const [id, prog] of entries) next[id] = prog ?? null;
       return next;
     });
+    // If any active goal just transitioned to achieved, reload lists to move it to archived
+    const anyAchievedActive = entries.some(([id, prog]) => {
+      if (!prog || !prog.achieved) return false;
+      const g = goals.find((x) => x.id === id);
+      return !!g; // was in active list
+    });
+    if (anyAchievedActive) {
+      // Best-effort refresh; avoid tight loops
+      try { await loadGoals(); } catch {}
+    }
   };
 
   // Auto-load on mount
@@ -144,6 +165,15 @@ export const [GoalsContext, useGoals] = createContextHook<GoalsStore>(() => {
     loadGoals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Subscribe to nutrition changes to recompute goal progress on-demand
+  useEffect(() => {
+    const off = events.on('nutrition:changed', () => {
+      // Recompute for active goals only
+      refreshProgress();
+    });
+    return () => off();
+  }, [refreshProgress]);
 
   // Selectors
   const topNActive: GoalsSelectors['topNActive'] = (n) => goals.slice(0, n);

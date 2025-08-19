@@ -5,6 +5,7 @@ import { NutritionEntry, DailyNutritionRecord } from '@/types/nutrition';
 import { categorizeMealByHour } from '@/utils/datetime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDayByDate, listEntriesForDay, upsertDay, upsertEntry } from '@/services/nutrition';
+import { events } from '@/utils/events';
 
 export const [NutritionProvider, useNutritionStore] = createContextHook(() => {
   const [foodItems, setFoodItems] = useState<string[]>([]);
@@ -194,6 +195,8 @@ export const [NutritionProvider, useNutritionStore] = createContextHook(() => {
             // ignore errors; will try next time
           }
         })();
+        // Notify listeners that nutrition has changed for this date
+        try { events.emit('nutrition:changed', { date }); } catch {}
         return updatedRecords;
       } else {
         const newRecord: DailyNutritionRecord = {
@@ -234,6 +237,8 @@ export const [NutritionProvider, useNutritionStore] = createContextHook(() => {
             // ignore errors; will try next time
           }
         })();
+        // Notify listeners that nutrition has changed for this date
+        try { events.emit('nutrition:changed', { date }); } catch {}
         return [...prev, newRecord];
       }
     });
@@ -241,6 +246,8 @@ export const [NutritionProvider, useNutritionStore] = createContextHook(() => {
 
   const clearRecords = () => {
     setDailyRecords([]);
+    // Broadcast a generic change (date unknown)
+    try { events.emit('nutrition:changed', undefined as any); } catch {}
   };
 
   return {

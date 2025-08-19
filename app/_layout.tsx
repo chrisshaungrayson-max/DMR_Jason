@@ -8,6 +8,7 @@ import { UserContext, useUser } from "@/store/user-store";
 import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/lib/supabaseClient";
 import { FoodsProvider } from "@/store/foods-store";
+import { GoalsContext } from "@/store/goals-store";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -58,13 +59,15 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <UserContext>
-        <NutritionProvider>
-          <FoodsProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <RootLayoutNav />
-            </GestureHandlerRootView>
-          </FoodsProvider>
-        </NutritionProvider>
+        <GoalsContext>
+          <NutritionProvider>
+            <FoodsProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <RootLayoutNav />
+              </GestureHandlerRootView>
+            </FoodsProvider>
+          </NutritionProvider>
+        </GoalsContext>
       </UserContext>
     </QueryClientProvider>
   );

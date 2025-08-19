@@ -5,17 +5,57 @@ import { DailyNutritionRecord, NutritionEntry } from '@/types/nutrition';
 import { useUser } from '@/store/user-store';
 import Colors from '@/constants/colors';
 import { Stack, useRouter } from 'expo-router';
+import { buildTrendSeries } from '@/utils/analytics';
+import TrendLineChart from '@/app/components/TrendLineChart';
+import { useGoals } from '@/store/goals-store';
+import { computeAvgDailyMacros } from '@/utils/idealComparison';
+import IdealComparisonCard from '@/app/components/IdealComparisonCard';
+import EmptyState from '@/app/components/EmptyState';
+import StreakHeatmap from '@/app/components/StreakHeatmap';
+import { strings } from '@/utils/strings';
+import { buildProteinCompliance, toWeeklyGrid } from '@/utils/streak';
 
 export default function HistoryScreen() {
   const { dailyRecords, isLoading } = useNutritionStore();
-  const { colorScheme } = useUser();
+  const { colorScheme, ideal } = useUser();
   const isDarkMode = colorScheme === 'dark';
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const router = useRouter();
+  const { byType } = useGoals();
 
   const sortedRecords = useMemo(() => {
     return [...dailyRecords].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [dailyRecords]);
+
+  // Determine metric and optional target based on active goals (protein target if available)
+  const chartSeries = useMemo(() => {
+    // Try to find an active protein streak goal to get gramsPerDay target
+    const proteinGoals = byType ? byType('protein_streak') : [];
+    const activeProtein = proteinGoals?.find((g) => g.active && g.status === 'active');
+    const target = typeof (activeProtein as any)?.params?.gramsPerDay === 'number'
+      ? (activeProtein as any).params.gramsPerDay as number
+      : undefined;
+
+    return buildTrendSeries(sortedRecords as DailyNutritionRecord[], target ? 'protein' : 'calories', {
+      weeks: 8,
+      target,
+    });
+  }, [sortedRecords, byType]);
+
+  // Actual averages over last 7 days
+  const avg = useMemo(() => computeAvgDailyMacros(sortedRecords as DailyNutritionRecord[], 7, new Date()), [sortedRecords]);
+
+  // Protein streak heatmap grid over last 28 days when protein goal active
+  const proteinHeatmapGrid = useMemo(() => {
+    const proteinGoals = byType ? byType('protein_streak') : [];
+    const activeProtein = proteinGoals?.find((g) => g.active && g.status === 'active');
+    const gramsPerDay = typeof (activeProtein as any)?.params?.gramsPerDay === 'number'
+      ? (activeProtein as any).params.gramsPerDay as number
+      : undefined;
+    if (!gramsPerDay) return null;
+    const pts = buildProteinCompliance(sortedRecords as DailyNutritionRecord[], gramsPerDay, 28, new Date());
+    return toWeeklyGrid(pts);
+  }, [sortedRecords, byType]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -90,21 +130,62 @@ export default function HistoryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+
       <Stack.Screen options={{ 
         title: 'History',
         headerStyle: { backgroundColor: theme.cardBackground },
         headerTintColor: theme.darkText,
       }} />
+      {/* Analytics: Weekly Trend */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        <TrendLineChart
+          title={chartSeries.target != null ? 'Protein Trend' : 'Calorie Trend'}
+          series={chartSeries}
+          metricLabel={chartSeries.target != null ? 'Protein (g avg/week)' : 'Calories (avg/week)'}
+          height={220}
+        />
+      </View>
+
+      {/* Ideal vs Actual */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+        <IdealComparisonCard
+          themeMode={isDarkMode ? 'dark' : 'light'}
+          idealCalories={ideal.calories}
+          actualCalories={avg.calories}
+          deltaCalories={avg.calories - ideal.calories}
+          idealProtein={ideal.grams.protein}
+          actualProtein={avg.grams.protein}
+          deltaProtein={avg.grams.protein - ideal.grams.protein}
+          idealCarbs={ideal.grams.carbs}
+          actualCarbs={avg.grams.carbs}
+          deltaCarbs={avg.grams.carbs - ideal.grams.carbs}
+          idealFat={ideal.grams.fat}
+          actualFat={avg.grams.fat}
+          deltaFat={avg.grams.fat - ideal.grams.fat}
+        />
+      </View>
+
+      {/* Protein Streak Heatmap */}
+      {proteinHeatmapGrid && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+          <StreakHeatmap title="Protein Streak (Last 4 Weeks)" grid={proteinHeatmapGrid} />
+        </View>
+      )}
       
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <Text style={{ color: theme.lightText }}>Loading history...</Text>
         </View>
       ) : dailyRecords.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: theme.lightText }]}>No nutrition records yet</Text>
-          <Text style={[styles.emptySubText, { color: theme.lightText }]}>Your logged meals will appear here</Text>
-        </View>
+        <EmptyState
+          title={strings.empty.history.title}
+          description={strings.empty.history.description}
+          actionLabel={strings.empty.history.actionLabel}
+          onAction={() => router.push('/')}
+          themeMode={isDarkMode ? 'dark' : 'light'}
+          testID="history-empty"
+          actionHint={strings.empty.history.actionHint}
+        />
       ) : (
         <FlatList
           data={sortedRecords}

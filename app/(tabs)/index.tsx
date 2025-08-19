@@ -13,6 +13,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useUser } from '@/store/user-store';
+import { useGoals } from '@/store/goals-store';
+import GoalCard from '@/app/components/GoalCard';
+import EmptyState from '@/app/components/EmptyState';
+import { strings } from '@/utils/strings';
 
 export default function HomePage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -27,9 +31,13 @@ export default function HomePage() {
 
   const { userInfo, setUserInfo, dailyRecords } = useNutritionStore();
   const { colorScheme } = useUser();
+  const { topNActive, progressFor, isLoading: goalsLoading, goals } = useGoals();
   const isDarkMode = colorScheme === 'dark';
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const router = useRouter();
+
+  // Top N goals to show on homepage
+  const visibleGoals = topNActive(3);
 
   const updateUserInfo = (field: keyof typeof userInfo, value: string | boolean) => {
     setUserInfo({ ...userInfo, [field]: value });
@@ -50,6 +58,7 @@ export default function HomePage() {
         headers: {
           'Content-Type': 'application/json',
         },
+  
         body: JSON.stringify({
           messages: [
             {
@@ -288,6 +297,30 @@ export default function HomePage() {
               ))}
             </View>
           </View>
+        </View>
+
+        {/* Your Goals */}
+        <View style={[styles.goalsSection, { backgroundColor: theme.cardBackground }]}>
+          <Text style={styles.sectionTitle}>Your Goals</Text>
+          {goalsLoading ? (
+            <Text style={styles.goalsEmptyText}>Loading goals…</Text>
+          ) : visibleGoals.length === 0 ? (
+            <EmptyState
+              title={strings.empty.goals.title}
+              description={strings.empty.goals.description}
+              actionLabel={strings.empty.goals.actionLabel}
+              onAction={() => router.push('/(tabs)/profile')}
+              themeMode={isDarkMode ? 'dark' : 'light'}
+              testID="goals-empty"
+              actionHint={strings.empty.goals.actionHint}
+            />
+          ) : (
+            <View style={styles.goalsList}>
+              {visibleGoals.map((g: any) => (
+                <GoalCard key={g.id} goal={g} progress={progressFor(g.id)} />
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Food Entry Section */}
@@ -793,6 +826,19 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 16,
     fontFamily: Platform.OS === 'ios' ? 'Helvetica' : 'sans-serif',
+  },
+  goalsSection: {
+    backgroundColor: '#fff',
+    borderRadius: Platform.OS === 'ios' ? 16 : 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  goalsList: {
+    marginTop: 4,
+  },
+  goalsEmptyText: {
+    color: '#555',
+    fontSize: 14,
   },
   actionGrid: {
     flexDirection: 'row',

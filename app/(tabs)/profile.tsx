@@ -11,6 +11,7 @@ import { uploadAvatarAsync } from '@/services/storage';
 import CustomDatePicker from '@/app/components/CustomDatePicker';
 import type { GoalType } from '@/types/goal';
 import { validateGoalInput } from '@/store/goals-helpers';
+import { strings } from '@/utils/strings';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -43,6 +44,11 @@ export default function ProfileScreen() {
   const [proteinPerDay, setProteinPerDay] = useState('140');
   const [proteinDays, setProteinDays] = useState('14');
   const [creatingGoal, setCreatingGoal] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const hasActiveSameType = useMemo(() => {
+    return goals.some((g) => g.type === goalType && g.active && g.status === 'active');
+  }, [goals, goalType]);
 
   const resetCreateState = () => {
     setGoalType('calorie_streak');
@@ -57,6 +63,7 @@ export default function ProfileScreen() {
     setCalMax('');
     setProteinPerDay('140');
     setProteinDays('14');
+    setCreateError(null);
   };
 
   const onOpenCreate = () => {
@@ -84,7 +91,11 @@ export default function ProfileScreen() {
         },
       });
       if (!result.ok) {
-        Alert.alert('Check your inputs', result.message);
+        setCreateError(result.message);
+        return;
+      }
+      if (hasActiveSameType) {
+        setCreateError('You already have an active goal of this type. Deactivate it first to create a new one.');
         return;
       }
       setCreatingGoal(true);
@@ -96,13 +107,13 @@ export default function ProfileScreen() {
         active: true,
       });
       setCreateVisible(false);
-      Alert.alert('Goal created', 'Nice work. Your new goal is live!');
+      // Optional toast could be added; avoiding Alert to keep flow inline
     } catch (e: any) {
       const msg = String(e?.message || '').toLowerCase();
       if (msg.includes('conflict') || msg.includes('active') || msg.includes('23505')) {
-        Alert.alert('Already have one running', 'You can only have one active goal of this type. Deactivate the current one first.');
+        setCreateError('You can only have one active goal of this type. Deactivate the current one first.');
       } else {
-        Alert.alert('Could not create goal', e?.message ?? 'Unknown error.');
+        setCreateError(e?.message ?? 'Could not create goal. Please try again.');
       }
     } finally {
       setCreatingGoal(false);
@@ -304,13 +315,20 @@ export default function ProfileScreen() {
       <View style={styles.infoSection}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={styles.sectionTitle}>Goal Management</Text>
-          <TouchableOpacity onPress={onOpenCreate} style={[styles.refreshGoalsButton, { backgroundColor: Colors.light.darkText }]}> 
-            <Text style={styles.refreshGoalsText}>Create Goal</Text>
+          <TouchableOpacity
+            onPress={onOpenCreate}
+            style={[styles.refreshGoalsButton, { backgroundColor: Colors.light.darkText }]} 
+            accessibilityRole="button"
+            accessibilityLabel={strings.profile.goal.openCreateLabel}
+            accessibilityHint={strings.profile.goal.openCreateHint}
+            testID="open-create-goal"
+          > 
+            <Text style={styles.refreshGoalsText}>{strings.profile.goal.openCreateLabel}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.noticeBox}>
-          <Text style={styles.noticeTitle}>Heads up</Text>
-          <Text style={styles.noticeText}>Goals cannot be edited after creation. To make changes, delete and recreate the goal.</Text>
+          <Text style={styles.noticeTitle}>{strings.profile.notices.headsUpTitle}</Text>
+          <Text style={styles.noticeText}>{strings.profile.notices.headsUpBody}</Text>
         </View>
         {goalsLoading ? (
           <Text style={styles.infoValue}>Loading goals…</Text>
@@ -331,7 +349,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.infoLabel, { marginBottom: 8 }]}>Top Goals</Text>
                 {topNActive(3).map((g) => (
                   <View key={g.id} style={styles.goalRow}>
-                    <Text style={styles.goalTitle}>{g.type.replaceAll('_', ' ')}</Text>
+                    <Text style={styles.goalTitle} testID={`goal-title-${g.type}`}>{g.type.replaceAll('_', ' ')}</Text>
                     <Text style={styles.goalMeta}>From {g.start_date} to {g.end_date || '—'}</Text>
                     <View style={styles.goalActionsRow}>
                       <TouchableOpacity onPress={() => deactivate(g.id)} style={styles.goalActionButton}>
@@ -350,7 +368,7 @@ export default function ProfileScreen() {
                 {goals.map((g) => (
                   <View key={g.id} style={styles.goalRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.goalTitle}>{g.type.replaceAll('_', ' ')}</Text>
+                      <Text style={styles.goalTitle} testID={`goal-title-${g.type}`}>{g.type.replaceAll('_', ' ')}</Text>
                       <Text style={styles.goalMeta}>From {g.start_date} to {g.end_date || '—'}</Text>
                     </View>
                     <View style={styles.goalActionsRow}>
@@ -412,22 +430,45 @@ export default function ProfileScreen() {
         <View style={styles.fullModalOverlay}>
           <View style={[styles.fullModalContainer, { backgroundColor: theme.cardBackground }]}> 
             <View style={styles.modalHeader}>
-              <Text style={styles.fullModalTitle}>Create Goal</Text>
-              <Pressable style={styles.closeButton} onPress={() => setCreateVisible(false)}>
+              <Text style={styles.fullModalTitle}>{strings.profile.goal.modalTitle}</Text>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setCreateVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel={strings.profile.goal.closeLabel}
+                accessibilityHint={strings.profile.goal.closeHint}
+              >
                 <Text style={styles.closeButtonText}>✕</Text>
               </Pressable>
             </View>
 
             <ScrollView style={styles.formScrollView}>
+              {createError && (
+                <View
+                  style={[
+                    styles.noticeBox,
+                    { borderColor: 'crimson', backgroundColor: isDarkMode ? '#43131a' : '#ffe8ea' },
+                  ]}
+                  accessibilityRole="alert"
+                >
+                  <Text style={[styles.noticeTitle, { color: 'crimson' }]}>{strings.profile.goal.errorTitle}</Text>
+                  <Text style={[styles.noticeText, { color: isDarkMode ? '#ffd1d6' : '#7a1a22' }]}>
+                    {createError}
+                  </Text>
+                </View>
+              )}
               <View style={styles.formSection}>
-                <Text style={styles.formSectionTitle}>Basics</Text>
-                <Text style={styles.formLabel}>Type</Text>
+                <Text style={styles.formSectionTitle}>{strings.profile.goal.basics}</Text>
+                <Text style={styles.formLabel}>{strings.profile.goal.type}</Text>
                 <View style={styles.pickerContainer}>
                   {(['calorie_streak','protein_streak','body_fat','weight','lean_mass_gain'] as GoalType[]).map((t) => (
                     <TouchableOpacity
                       key={t}
                       style={[styles.activityButton, goalType === t && styles.activityButtonSelected]}
                       onPress={() => setGoalType(t)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: goalType === t }}
+                      accessibilityLabel={t.replaceAll('_',' ')}
                     >
                       <Text style={[styles.activityButtonText, goalType === t && styles.activityTextSelected]}>
                         {t.replaceAll('_',' ')}
@@ -435,15 +476,30 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+                {hasActiveSameType && (
+                  <View
+                    style={[styles.noticeBox, { backgroundColor: isDarkMode ? '#2a2a2a' : '#f7f7f7' }]} 
+                    accessibilityRole="alert"
+                  > 
+                    <Text style={[styles.noticeTitle, { color: Colors.light.darkText }]}>{strings.profile.goal.conflictTitle}</Text>
+                    <Text style={styles.noticeText}>{strings.profile.goal.conflictBody}</Text>
+                  </View>
+                )}
 
                 <View style={[styles.formField, { marginTop: 12 }]}>
-                  <Text style={styles.formLabel}>Start Date</Text>
-                  <Text style={styles.infoValue}>{startDateISO} (auto)</Text>
+                  <Text style={styles.formLabel}>{strings.profile.goal.startDate}</Text>
+                  <Text style={styles.infoValue}>{startDateISO} {strings.profile.goal.startDateAuto}</Text>
                 </View>
 
                 <View style={styles.formField}>
-                  <Text style={styles.formLabel}>End Date</Text>
-                  <TouchableOpacity onPress={() => setEndPickerVisible(true)} style={styles.formInput}>
+                  <Text style={styles.formLabel}>{strings.profile.goal.endDate}</Text>
+                  <TouchableOpacity
+                    onPress={() => setEndPickerVisible(true)}
+                    style={styles.formInput}
+                    accessibilityRole="button"
+                    accessibilityLabel={strings.profile.goal.endDate}
+                    accessibilityHint={strings.profile.goal.endDateHint}
+                  >
                     <Text style={{ color: Colors.light.darkText }}>{endDateISO}</Text>
                   </TouchableOpacity>
                 </View>
@@ -538,14 +594,18 @@ export default function ProfileScreen() {
               <View style={styles.formActions}>
                 <TouchableOpacity
                   onPress={onConfirmCreate}
-                  disabled={creatingGoal}
+                  disabled={creatingGoal || hasActiveSameType}
+                  accessibilityRole="button"
+                  accessibilityLabel={strings.profile.goal.createAction}
+                  accessibilityHint={hasActiveSameType ? strings.profile.goal.createResolveConflict : 'Creates a new active goal'}
+                  testID="submit-create-goal"
                   style={[
                     styles.saveProfileButton,
-                    { width: '100%', opacity: creatingGoal ? 0.7 : 1 },
+                    { width: '100%', opacity: creatingGoal || hasActiveSameType ? 0.6 : 1 },
                   ]}
                 >
                   <Text style={styles.saveProfileButtonText}>
-                    {creatingGoal ? 'Creating…' : 'Create Goal'}
+                    {creatingGoal ? strings.profile.goal.createCreating : hasActiveSameType ? strings.profile.goal.createResolveConflict : strings.profile.goal.createAction}
                   </Text>
                 </TouchableOpacity>
               </View>

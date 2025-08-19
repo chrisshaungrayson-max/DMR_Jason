@@ -4,9 +4,12 @@
   "version": "1.0.0",
   "scripts": {
     "start": "npx expo start --tunnel",
-    "start-web": "npx expo start --web --tunnel",
+    "start-web": "CI=1 npx expo start --web --tunnel --port 19006",
     "start-web-dev": "DEBUG=expo* npx expo start --web --tunnel",
-    "test": "vitest run"
+    "test": "vitest run",
+    "e2e:test": "playwright test",
+    "e2e:test:headed": "playwright test --headed --project=chromium",
+    "e2e:install": "playwright install --with-deps"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -55,6 +58,10 @@
     "@babel/core": "^7.25.2",
     "@expo/ngrok": "^4.1.0",
     "@types/react": "~19.0.10",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/dom": "^10.4.0",
+    "@playwright/test": "^1.46.1",
+    "jsdom": "^25.0.1",
     "typescript": "~5.8.3",
     "vitest": "^2.1.1"
   },

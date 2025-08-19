@@ -9,7 +9,7 @@ import type {
   WeeklyAveragePoint,
 } from '../types/goal';
 import { parseGoalParams } from '../types/goal.validation';
-import { ISO_WEEK_START_DOW, MIN_WEEKLY_MEASUREMENTS, STREAK_STRICT } from '../types/goal';
+import { ISO_WEEK_START_DOW, MIN_WEEKLY_MEASUREMENTS, STREAK_STRICT, MIN_TREND_WEEKS_FOR_ACHIEVEMENT } from '../types/goal';
 
 // Simple typed error for unique constraint (one active goal per type)
 export class ActiveGoalConflictError extends Error {
@@ -179,15 +179,14 @@ async function fetchGoalMeasurements(goalId: string): Promise<RawMeasurement[]> 
 }
 
 function getWeekStart(dateStr: string): string {
-  // Use local timezone; compute week start according to ISO_WEEK_START_DOW
-  const d = new Date(dateStr + 'T00:00:00');
+  // Use local timezone consistently and avoid toISOString() UTC shifts.
+  const base = new Date(dateStr + 'T00:00:00');
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
   const dow = d.getDay(); // 0=Sun..6=Sat
-  // ISO week starts Monday (1). Shift back to Monday.
   const isoDow = dow === 0 ? 7 : dow; // Sun->7
-  const diffDays = isoDow - ISO_WEEK_START_DOW; // usually 1
-  const weekStart = new Date(d);
-  weekStart.setDate(d.getDate() - diffDays);
-  return weekStart.toISOString().slice(0, 10);
+  const diffDays = isoDow - ISO_WEEK_START_DOW; // e.g., if Monday start, Mon->0
+  const weekStart = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diffDays);
+  return toLocalISODate(weekStart);
 }
 
 function bucketWeeklyAverage(values: { date: string; num: number }[]): WeeklyAveragePoint[] {
@@ -276,13 +275,22 @@ export async function computeGoalProgress(goal: GoalRecord): Promise<GoalProgres
   let label = '';
   if (goal.type === 'body_fat') {
     const { targetPct } = goal.params as any;
-    ({ percent, label } = computePercentForBodyFat(trend, targetPct));
+    if (typeof targetPct === 'number' && isFinite(targetPct) && targetPct > 0 && targetPct <= 100) {
+      ({ percent, label } = computePercentForBodyFat(trend, targetPct));
+    }
   } else if (goal.type === 'weight') {
     const { targetWeightKg, direction } = goal.params as any;
-    ({ percent, label } = computePercentForWeight(trend, targetWeightKg, direction));
+    if (
+      (direction === 'down' || direction === 'up') &&
+      typeof targetWeightKg === 'number' && isFinite(targetWeightKg) && targetWeightKg > 0
+    ) {
+      ({ percent, label } = computePercentForWeight(trend, targetWeightKg, direction));
+    }
   } else if (goal.type === 'lean_mass_gain') {
     const { targetKg } = goal.params as any;
-    ({ percent, label } = computePercentForLeanMassGain(trend, targetKg));
+    if (typeof targetKg === 'number' && isFinite(targetKg) && targetKg > 0) {
+      ({ percent, label } = computePercentForLeanMassGain(trend, targetKg));
+    }
   }
 
   const progress: GoalProgress = {
@@ -291,7 +299,8 @@ export async function computeGoalProgress(goal: GoalRecord): Promise<GoalProgres
     percent,
     label,
     trend,
-    achieved: percent >= 100,
+    // Prevent premature achievement if we don't have enough weekly points
+    achieved: percent >= 100 && trend.length >= MIN_TREND_WEEKS_FOR_ACHIEVEMENT,
     computedAtISO: new Date().toISOString(),
   };
   return progress;
