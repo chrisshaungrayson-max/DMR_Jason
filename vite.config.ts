@@ -7,9 +7,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
     },
   },
+  define: {
+    __DEV__: true,
+  },
   test: {
-    environment: 'node',
+    environment: 'jsdom',
     globals: true,
+    setupFiles: ['./test-setup.ts'],
     include: [
       'services/__tests__/**/*.test.ts',
       'services/__tests__/**/*.test.tsx',
