@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, ScrollView, KeyboardAvoidingView, Platform, Pressable, Modal, Image, Switch } from 'react-native';
 import { useNutritionStore } from '@/store/nutrition-store';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { User, Camera } from 'lucide-react-native';
@@ -16,7 +16,9 @@ import { useUser } from '@/store/user-store';
 import { useGoals } from '@/store/goals-store';
 import GoalCard from '@/app/components/GoalCard';
 import EmptyState from '@/app/components/EmptyState';
+import DevPanel from '@/app/components/DevPanel';
 import { strings } from '@/utils/strings';
+import { analyzeFoodEntry } from '@/services/foodAnalysis';
 
 export default function HomePage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -43,6 +45,13 @@ export default function HomePage() {
     setUserInfo({ ...userInfo, [field]: value });
   };
 
+  // Reset loading state when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      setLoading(false);
+    }, [])
+  );
+
 
 
   const handleLogFood = async () => {
@@ -53,54 +62,31 @@ export default function HomePage() {
     }
     try {
       setLoading(true);
-      const response = await fetch('https://toolkit.rork.com/text/llm/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-  
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a nutrition expert. Analyze the following food items and provide a detailed macronutrient breakdown (calories, protein, carbs, fat) for each item and a total summary. Respond in a structured JSON format like: {"items": [{"name": "item", "calories": 0, "protein": 0, "carbs": 0, "fat": 0}], "total": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}}'
-            },
-            {
-              role: 'user',
-              content: `Analyze the macronutrients for: ${foodEntry}`
-            }
-          ]
-        }),
-      });
-      const data = await response.json();
-      console.log('LLM Response:', data);
-      // Extract JSON from the response content
-      let result;
-      try {
-        // Try to find JSON content in the response
-        const content = data.completion || '';
-        const jsonMatch = content.match(/{.*}/s);
-        if (jsonMatch) {
-          result = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No valid JSON found in response');
-        }
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        throw new Error('Failed to parse response from server');
+      // Use the local food analysis service, which returns a JS object.
+      const analysisResult = await analyzeFoodEntry(foodEntry);
+
+      if (!analysisResult || !analysisResult.items || analysisResult.items.length === 0) {
+        Alert.alert('Error', 'Could not analyze food entry. Please try again.');
+        // Ensure loading is turned off in this case.
+        setLoading(false);
+        return;
       }
+      
+      // Navigate to results page with the analyzed data
       router.push({
         pathname: '/results',
-        params: { 
-          macros: JSON.stringify(result), 
+        params: {
+          macros: JSON.stringify(analysisResult),
           date: selectedDate.toISOString(),
-          foodList: foodEntry
+          foodList: foodEntry,
         },
       });
+      
+      // Reset loading state after successful navigation
+      setLoading(false);
     } catch (error) {
       console.error('Error processing food entry:', error);
       Alert.alert('Error', 'Failed to analyze food entry. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -436,6 +422,9 @@ export default function HomePage() {
             </View>
           )}
         </View>
+
+        {/* Dev Panel - only shows in development */}
+        <DevPanel />
       </ScrollView>
 
       {/* Profile Edit Modal */}

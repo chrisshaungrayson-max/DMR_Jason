@@ -39,7 +39,13 @@ export async function searchFoodsByName(query: string, limit = 20): Promise<Food
 }
 
 export async function upsertFood(input: UpsertFoodInput): Promise<Food> {
-  const payload = { ...input } as any;
+  // Ensure we include the authenticated user's id to satisfy RLS policies
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  const user = userData?.user;
+  if (!user) throw new Error('Not authenticated: cannot upsert food without a user session');
+
+  const payload = { ...input, user_id: (input as any).user_id ?? user.id } as any;
   const { data, error } = await supabase
     .from('foods')
     .upsert(payload)

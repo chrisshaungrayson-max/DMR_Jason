@@ -9,6 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    globals: true,
     include: [
       'services/__tests__/**/*.test.ts',
       'services/__tests__/**/*.test.tsx',

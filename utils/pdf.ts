@@ -1,15 +1,25 @@
 import { NutritionItem } from '@/types/nutrition';
 import Colors from '@/constants/colors';
+import { generateRadarSvg } from '@/utils/report';
 
 // Shared HTML generator to ensure PDF exports are identical across the app
-export function generateReportHTML(name: string, dateLabel: string, nutritionData: NutritionItem[]) {
+export function generateReportHTML(
+  name: string,
+  dateLabel: string,
+  nutritionData: NutritionItem[],
+  idealMacroPercents?: { protein: number; carbs: number; fat: number },
+  logoDataUrl?: string
+) {
   const calculateTotals = () => {
+    if (!nutritionData || nutritionData.length === 0) {
+      return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    }
     return nutritionData.reduce(
       (acc, item) => ({
-        calories: acc.calories + item.calories,
-        protein: acc.protein + item.protein,
-        carbs: acc.carbs + item.carbs,
-        fat: acc.fat + item.fat,
+        calories: acc.calories + (item.calories || 0),
+        protein: acc.protein + (item.protein || 0),
+        carbs: acc.carbs + (item.carbs || 0),
+        fat: acc.fat + (item.fat || 0),
       }),
       { calories: 0, protein: 0, carbs: 0, fat: 0 }
     );
@@ -27,22 +37,34 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
     }
   };
 
+  const calculateMacroPercentages = (totals: any) => {
+    const totalCalories = totals.protein * 4 + totals.carbs * 4 + totals.fat * 9;
+    if (totalCalories === 0) {
+      return { protein: 0, carbs: 0, fat: 0 };
+    }
+    return {
+      protein: Math.round((totals.protein * 4 / totalCalories) * 100),
+      carbs: Math.round((totals.carbs * 4 / totalCalories) * 100),
+      fat: Math.round((totals.fat * 9 / totalCalories) * 100)
+    };
+  };
+
   const getPieData = (totals: any) => {
-    const total = totals.protein * 4 + totals.carbs * 4 + totals.fat * 9;
+    const percentages = calculateMacroPercentages(totals);
     return [
       {
         name: 'Protein',
-        population: total ? Math.round((totals.protein * 4 / total) * 100) : 0,
+        population: percentages.protein,
         color: '#BBA46E',
       },
       {
         name: 'Carbs',
-        population: total ? Math.round((totals.carbs * 4 / total) * 100) : 0,
+        population: percentages.carbs,
         color: '#8bc34a',
       },
       {
         name: 'Fat',
-        population: total ? Math.round((totals.fat * 9 / total) * 100) : 0,
+        population: percentages.fat,
         color: '#ff9800',
       }
     ];
@@ -66,6 +88,7 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
 
   const totals = calculateTotals();
   const calorieStatus = getCalorieStatus(totals.calories);
+  const actualMacroPercents = calculateMacroPercentages(totals);
 
   const tableRows = nutritionData.map((item, index) => `
     <tr style="background-color: ${index % 2 === 0 ? '#FFFFFF' : '#F7F2EA'};">
@@ -110,6 +133,8 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
     </div>
   `).join('');
 
+  const radarChart = generateRadarSvg(actualMacroPercents, idealMacroPercents);
+
   // Brand palette
   const gold = Colors.light.gold; // "#b8a369"
   const lightBg = '#F2EBE3';
@@ -120,6 +145,7 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <style>
+        @page { size: A4 portrait; margin: 14mm; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: ${lightBg}; color: #333; }
         .container { max-width: 800px; margin: 24px auto; padding: 24px; background-color: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
         .header { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid ${tableBorder}; }
@@ -136,7 +162,7 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
         .calorie-info h3 { font-size: 16px; color: #666; margin: 0 0 4px 0; }
         .calorie-value { font-size: 32px; font-weight: bold; color: #333; margin: 0; }
         .status-badge { padding: 8px 16px; border-radius: 20px; color: #fff; font-weight: bold; background-color: ${calorieStatus.color}; }
-        .chart-section { background-color: #fff; border-radius: 12px; margin: 16px 0; padding: 16px; border: 1px solid ${tableBorder}; }
+        .chart-section { background-color: #fff; border-radius: 12px; margin: 16px 0; padding: 16px; border: 1px solid ${tableBorder}; page-break-inside: avoid; }
         .section-title { font-size: 18px; font-weight: bold; color: #333; margin: 0 0 16px 0; }
         .tableWrap { border-radius: 12px; border: 1px solid ${tableBorder}; overflow: hidden; margin-top: 12px; }
         table { width: 100%; border-collapse: collapse; }
@@ -149,9 +175,9 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
     <body>
       <div class="container">
         <div class="header">
-          <img class="logo" src="https://r2-pub.rork.com/attachments/nbnzfjpejlkyi4jjvjdzc" alt="Brand Logo" />
+          <img class="logo" src="${logoDataUrl || require('@/assets/images/brand-logo.png')}" alt="Brand Logo" />
           <div class="titleBlock">
-            <div class="brand">DMR by Jason Lam PT</div>
+            <div class="brand">Daily Macros by Jason Lam</div>
             <h1 class="title">${name.toUpperCase()}'S DAILY MACROS</h1>
             <p class="subtitle">${dateLabel}</p>
           </div>
@@ -192,6 +218,11 @@ export function generateReportHTML(name: string, dateLabel: string, nutritionDat
         <div class="chart-section">
           <div class="section-title">Progress Toward Targets</div>
           ${barChart}
+        </div>
+
+        <div class="chart-section">
+          <div class="section-title">Macro Distribution vs Ideal</div>
+          ${radarChart}
         </div>
 
         <div class="chart-section">

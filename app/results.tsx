@@ -11,6 +11,8 @@ import * as Haptics from 'expo-haptics';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { generateReportHTML } from '@/utils/pdf';
+import { loadImageAsDataUrl } from '@/utils/assets';
+import { formatDateLabel, normalizeNutritionItems } from '@/utils/report';
 import RadarChart from './components/RadarChart';
 import { useUser } from '@/store/user-store';
 
@@ -31,18 +33,53 @@ export default function ResultsScreen() {
   
   const formatDateForDisplay = (dateString: string) => {
     try {
-      const date = new Date(dateString + 'T00:00:00');
-      if (isNaN(date.getTime())) {
-        return 'Invalid Date';
+      if (!dateString) {
+        return new Date().toLocaleDateString('en-US', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
       }
+
+      // Handle different date formats
+      let date: Date;
+      
+      // If it's already a full ISO string or Date object
+      if (dateString.includes('T') || dateString.includes(':')) {
+        date = new Date(dateString);
+      } 
+      // If it's a YYYY-MM-DD format
+      else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Parse as local date to avoid timezone issues
+        const [year, month, day] = dateString.split('-').map(Number);
+        date = new Date(year, month - 1, day);
+      }
+      // Try parsing as-is
+      else {
+        date = new Date(dateString);
+      }
+
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return new Date().toLocaleDateString('en-US', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+      }
+
       return date.toLocaleDateString('en-US', {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
       });
     } catch (error) {
-      console.error('Date formatting error:', error);
-      return 'Invalid Date';
+      console.error('Date formatting error:', error, 'for date:', dateString);
+      return new Date().toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
     }
   };
 
@@ -165,12 +202,20 @@ export default function ResultsScreen() {
     if (Platform.OS !== 'web') {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    // Prepare local brand logo (base64) for embedding in PDF
+    const brandLogo = require('@/assets/images/brand-logo.png');
+    const logoDataUrl = await loadImageAsDataUrl(brandLogo);
+
     // Use shared PDF generator for consistent exports
     const htmlContent = generateReportHTML(
       userInfo.name,
-      currentDate,
-      nutritionData
+      formatDateLabel(String(date)),
+      normalizeNutritionItems(nutritionData),
+      ideal?.percents,
+      logoDataUrl
     );
+    
+    const filename = `${userInfo.name}-Daily-Macros-${new Date().toISOString().split('T')[0]}.pdf`;
       
       if (Platform.OS === 'web') {
         // Web implementation using browser's print functionality

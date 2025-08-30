@@ -9,6 +9,8 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { NutritionItem, NutritionTotal } from '@/types/nutrition';
 import { generateReportHTML } from '@/utils/pdf';
+import { loadImageAsDataUrl } from '@/utils/assets';
+import { formatDateLabel, normalizeNutritionItems } from '@/utils/report';
 import RadarChart from './components/RadarChart';
 
 function ceil(n: number) { return Math.ceil(n || 0); }
@@ -24,19 +26,10 @@ export default function ResultsPopover() {
   const { userInfo } = useNutritionStore();
 
   const items: NutritionItem[] = useMemo(() => {
-    const normalize = (arr: any[] = []): NutritionItem[] =>
-      arr.map((it: any) => ({
-        ...it,
-        calories: Number(it?.calories) || 0,
-        protein: Number(it?.protein) || 0,
-        carbs: Number(it?.carbs) || 0,
-        fat: Number(it?.fat) || 0,
-      }));
-
     if (params.macros) {
       try {
         const parsed = JSON.parse(params.macros as string);
-        return normalize(parsed.items || []);
+        return normalizeNutritionItems(parsed.items || []);
       } catch {
         return [];
       }
@@ -44,7 +37,7 @@ export default function ResultsPopover() {
     if (params.date) {
       const record = dailyRecords.find(r => r.date === params.date);
       if (!record) return [];
-      return normalize(record.entries.flatMap(e => e.items));
+      return normalizeNutritionItems(record.entries.flatMap(e => e.items));
     }
     return [];
   }, [params.macros, params.date, dailyRecords]);
@@ -71,10 +64,7 @@ export default function ResultsPopover() {
     };
   }, [totalKcal, totals]);
 
-  const displayDate = useMemo(() => {
-    const d = params.date ? new Date(`${params.date}T00:00:00`) : new Date();
-    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  }, [params.date]);
+  const displayDate = useMemo(() => formatDateLabel(String(params.date ?? new Date())), [params.date]);
 
   const handleExport = async () => {
     try {
@@ -82,7 +72,18 @@ export default function ResultsPopover() {
       if (Platform.OS !== 'web') {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      const html = generateReportHTML(user.name, displayDate, items);
+      const brandLogo = require('@/assets/images/brand-logo.png');
+      const logoDataUrl = await loadImageAsDataUrl(brandLogo);
+
+      const html = generateReportHTML(
+        user.name,
+        displayDate,
+        items,
+        ideal?.percents,
+        logoDataUrl
+      );
+      
+      const filename = `${user.name}-Daily-Macros-${(params.date ?? '').toString() || new Date().toISOString().split('T')[0]}.pdf`;
       if (Platform.OS === 'web') {
         const w = window.open('', '_blank');
         if (w) {
@@ -93,14 +94,14 @@ export default function ResultsPopover() {
       } else {
         const { uri } = await Print.printToFileAsync({ html, base64: false });
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Report as PDF', UTI: 'com.adobe.pdf' });
+          await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Nutrition Report', UTI: 'com.adobe.pdf' });
         } else {
           Alert.alert('Success', 'PDF has been generated and saved.');
         }
       }
     } catch (e) {
-      console.error('Export PDF error', e);
-      Alert.alert('Error', 'Failed to export PDF.');
+      console.error('Error exporting PDF:', e);
+      Alert.alert('Error', 'Failed to export PDF. Please try again.');
     } finally {
       setIsExporting(false);
     }

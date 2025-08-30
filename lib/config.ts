@@ -1,6 +1,9 @@
 // Application configuration for fitness goals feature
 // Centralized settings that can be adjusted without code changes
 
+// Public keys and third-party configuration
+// Clerk authentication removed
+
 export const GOALS_CONFIG = {
   // Number of top goals to display on Dashboard/Homepage
   TOP_N_GOALS: parseInt(process.env.EXPO_PUBLIC_TOP_N_GOALS || '3', 10),

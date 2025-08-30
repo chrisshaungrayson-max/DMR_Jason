@@ -9,11 +9,13 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { NutritionEntry } from '@/types/nutrition';
 import { generateReportHTML } from '@/utils/pdf';
+import { loadImageAsDataUrl } from '@/utils/assets';
+import { formatDateLabel, normalizeNutritionItems } from '@/utils/report';
 
 export default function DailySummaryScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const { dailyRecords, userInfo } = useNutritionStore();
-  const { colorScheme } = useUser();
+  const { colorScheme, ideal } = useUser();
   const isDarkMode = colorScheme === 'dark';
   const theme = isDarkMode ? Colors.dark : Colors.light;
   const [isExporting, setIsExporting] = useState(false);
@@ -123,11 +125,19 @@ const formatDateForDisplay = (dateString: string) => {
       }
       // Use shared generator for identical PDF exports
       const items = record ? record.entries.flatMap(e => e.items) : [];
+      const normalized = normalizeNutritionItems(items);
+      const brandLogo = require('@/assets/images/brand-logo.png');
+      const logoDataUrl = await loadImageAsDataUrl(brandLogo);
+
       const html = generateReportHTML(
         userInfo.name,
-        formatDateForDisplay(String(date)),
-        items
+        formatDateLabel(String(date)),
+        normalized,
+        ideal?.percents,
+        logoDataUrl
       );
+      
+      const filename = `${userInfo.name}-Daily-Macros-${String(date)}.pdf`;
       if (Platform.OS === 'web') {
         const w = window.open('', '_blank');
         if (w) {
@@ -138,14 +148,14 @@ const formatDateForDisplay = (dateString: string) => {
       } else {
         const { uri } = await Print.printToFileAsync({ html, base64: false });
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Day as PDF', UTI: 'com.adobe.pdf' });
+          await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Nutrition Report', UTI: 'com.adobe.pdf' });
         } else {
           Alert.alert('Success', 'PDF has been generated and saved.');
         }
       }
     } catch (e) {
-      console.error('Export day PDF error', e);
-      Alert.alert('Error', 'Failed to export day PDF.');
+      console.error('Error exporting PDF:', e);
+      Alert.alert('Error', 'Failed to export PDF. Please try again.');
     } finally {
       setIsExporting(false);
     }

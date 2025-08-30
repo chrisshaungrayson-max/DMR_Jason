@@ -60,6 +60,31 @@ EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
+Authentication (Clerk):
+```bash
+# Clerk publishable key (client-safe)
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+```
+
+See `lib/config.ts` for how this is loaded.
+
+### Configure Supabase to trust Clerk (External JWT)
+To allow Supabase Row Level Security (RLS) to evaluate `auth.uid()` using Clerk user IDs:
+
+1) Clerk Dashboard → JWT Templates → create a template named `supabase` with claim:
+   - `aud = authenticated`
+2) Supabase → Settings → API → JWT:
+   - Audience: `authenticated`
+   - Issuer: `https://<your-frontend-api>`
+   - JWKS URL: `https://<your-frontend-api>/.well-known/jwks.json`
+3) The app already requests this token via `getToken({ template: 'supabase' })` and injects it into all Supabase requests.
+
+### Verify end-to-end
+- In development, open the in-app Dev Panel and use:
+  - Get `auth.uid()` (RPC `public.get_auth_uid`) to confirm the current Clerk user ID.
+  - Check profile exists (created on first sign-in by the app).
+  - Preview Clerk token (first 24 chars) for sanity.
+
 Optional (Goals Configuration):
 ```bash
 # Number of top goals to display on Dashboard (default: 3)

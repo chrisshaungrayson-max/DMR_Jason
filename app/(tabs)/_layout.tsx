@@ -6,6 +6,7 @@ import { View, StyleSheet, Pressable, Alert } from "react-native";
 import Colors from "@/constants/colors";
 import { useUser } from "@/store/user-store";
 import FoodLogPopover from "@/app/components/FoodLogPopover";
+import TDEEActionModal from "@/app/components/TDEEActionModal";
 
 export default function TabLayout() {
   const router = useRouter();
@@ -38,74 +39,33 @@ export default function TabLayout() {
   const isDarkMode = colorScheme === 'dark';
   const theme = isDarkMode ? Colors.dark : Colors.light;
   
+  const [showActionModal, setShowActionModal] = useState(false);
   const [showFoodLog, setShowFoodLog] = useState(false);
   
   const handleLogFood = async (food: string, date: Date, nutritionInfo?: any) => {
     try {
-      // If the modal already produced nutrition info, construct a results payload
-      if (nutritionInfo) {
-        const result = {
-          items: [
-            {
-              name: nutritionInfo.food ?? food,
-              calories: nutritionInfo.calories ?? 0,
-              protein: nutritionInfo.protein ?? 0,
-              carbs: nutritionInfo.carbs ?? 0,
-              fat: nutritionInfo.fat ?? 0,
-            },
-          ],
-          total: {
+      if (!nutritionInfo) {
+        Alert.alert('Error', 'Could not analyze food. The analysis service may be down.');
+        return;
+      }
+
+      const result = {
+        items: [
+          {
+            name: nutritionInfo.food ?? food,
             calories: nutritionInfo.calories ?? 0,
             protein: nutritionInfo.protein ?? 0,
             carbs: nutritionInfo.carbs ?? 0,
             fat: nutritionInfo.fat ?? 0,
           },
-        } as const;
-
-        router.push({
-          pathname: '/results',
-          params: {
-            macros: JSON.stringify(result),
-            date: date.toISOString(),
-            foodList: food,
-          },
-        });
-        return;
-      }
-
-      // Otherwise, mirror the dashboard "Log Food" workflow using the open LLM endpoint
-      const response = await fetch('https://toolkit.rork.com/text/llm/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a nutrition expert. Analyze the following food items and provide a detailed macronutrient breakdown (calories, protein, carbs, fat) for each item and a total summary. Respond in a structured JSON format like: {"items": [{"name": "item", "calories": 0, "protein": 0, "carbs": 0, "fat": 0}], "total": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}}',
-            },
-            {
-              role: 'user',
-              content: `Analyze the macronutrients for: ${food}`,
-            },
-          ],
-        }),
-      });
-
-      const data = await response.json();
-      let result: any;
-      try {
-        const content: string = data.completion || '';
-        const jsonMatch = content.match(/{.*}/s);
-        if (jsonMatch) {
-          result = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No valid JSON found in response');
-        }
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
-        throw new Error('Failed to parse response from server');
-      }
+        ],
+        total: {
+          calories: nutritionInfo.calories ?? 0,
+          protein: nutritionInfo.protein ?? 0,
+          carbs: nutritionInfo.carbs ?? 0,
+          fat: nutritionInfo.fat ?? 0,
+        },
+      };
 
       router.push({
         pathname: '/results',
@@ -119,6 +79,11 @@ export default function TabLayout() {
       console.error('Error processing food entry from modal:', err);
       Alert.alert('Error', 'Failed to analyze food entry. Please try again.');
     }
+  };
+
+  const handleCalculateTDEE = () => {
+    // Navigate to TDEE calculator input screen
+    router.push('/tdee-input');
   };
 
   return (
@@ -163,7 +128,7 @@ export default function TabLayout() {
           tabBarIcon: () => (
             <Pressable 
               style={styles.addButtonContainer}
-              onPress={() => setShowFoodLog(true)}
+              onPress={() => setShowActionModal(true)}
             >
               <View style={[styles.addButton, { backgroundColor: theme.tint, shadowColor: theme.tint + '80' }]}>
                 <Plus size={32} color="white" />
@@ -188,6 +153,13 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    
+    <TDEEActionModal
+      visible={showActionModal}
+      onClose={() => setShowActionModal(false)}
+      onLogFood={() => setShowFoodLog(true)}
+      onCalculateTDEE={handleCalculateTDEE}
+    />
     
     <FoodLogPopover
       visible={showFoodLog}

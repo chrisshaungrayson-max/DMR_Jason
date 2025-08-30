@@ -1,0 +1,86 @@
+## Relevant Files
+
+- `app/_layout.tsx` - App provider root; will host `ClerkProvider` and auth-aware navigation.
+- `app/(tabs)/_layout.tsx` - Tabs layout; will gate access based on auth state.
+- `app/(auth)/sign-in.tsx` - Sign-in screen (Clerk UI or custom wrapper).
+- `app/(auth)/sign-up.tsx` - Sign-up screen (Clerk UI or custom wrapper).
+- `app/onboarding/index.tsx` - Onboarding wizard entry with step router.
+- `app/onboarding/steps/BasicInfo.tsx` - Step 1: name, age, sex.
+- `app/onboarding/steps/Measurements.tsx` - Step 2: height, weight.
+- `app/onboarding/steps/Activity.tsx` - Step 3: activity level.
+- `app/onboarding/steps/Preferences.tsx` - Step 4: units (metric/imperial).
+- `app/components/` - Reuse UI components and styling primitives for consistent branding.
+- `constants/colors.ts` - Source of truth for theming Clerk and onboarding UI.
+- `lib/supabaseClient.ts` - Supabase client; integrate Clerk session token for RLS.
+- `lib/config.ts` - Configuration/env keys (Clerk publishable key, etc.).
+- `lib/idealMacros.ts` - May be used post-onboarding to compute targets (if needed).
+- `types/user.ts` - `UserInfo` shape; align with onboarding form state and `profiles` schema.
+- `.env` - Added EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY.
+- `.env.example` - Added placeholder for EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY.
+- `supabase/migrations/*` - Existing `profiles` schema; confirm compatibility, no changes expected.
+- `store/goals-store.tsx` - Ensure auth state changes don’t break existing stores.
+- `utils/analytics.ts` - Hook success/error events for success metrics.
+- `app/components/DevPanel.tsx` - Optional: toggle auth debug info in dev.
+
+### Notes
+
+- Unit tests should typically be placed alongside the code files they are testing (e.g., `MyComponent.tsx` and `MyComponent.test.tsx` in the same directory).
+- Use `npx jest [optional/path/to/test/file]` to run tests. Running without a path executes all tests found by the Jest configuration.
+
+## Tasks
+
+- [ ] 1.0 Integrate Clerk into Expo app providers and configuration
+   - [x] 1.1 Install dependencies: `@clerk/clerk-expo`, `expo-secure-store`, and types.
+   - [x] 1.2 Add Clerk publishable key to `.env` and load via `lib/config.ts`.
+   - [x] 1.3 Wrap app root with `ClerkProvider` in `app/_layout.tsx`.
+   - [x] 1.4 Configure token cache with `expo-secure-store` for session persistence.
+   - [x] 1.5 Create a reusable `useAuthGuard` hook to expose `isSignedIn` and session.
+   - [x] 1.6 Document environment setup for dev/staging/prod in `README.md`.
+- [ ] 2.0 Add authentication routes/screens and gate unauthenticated users at startup
+  - [x] 2.1 Create `app/(auth)/sign-in.tsx` using Clerk components or `<SignIn/>`.
+  - [x] 2.2 Create `app/(auth)/sign-up.tsx` using Clerk components or `<SignUp/>`.
+  - [x] 2.3 Configure initial route: if unauthenticated, navigate to `(auth)` group.
+   - [x] 2.4 Protect `(tabs)` navigator so it only renders for `isSignedIn === true`.
+   - [x] 2.5 Add a loading/splash state while restoring session.
+- [ ] 3.0 Wire Supabase to accept Clerk session tokens and establish user profile linkage
+   - [x] 3.1 Update `lib/supabaseClient.ts` to attach Clerk JWT to requests (e.g., `postgrest` fetch).
+   - [ ] 3.2 Configure Supabase to verify Clerk JWT via External JWT (Clerk JWKS) so `auth.uid()` maps to Clerk user ID.
+   - [x] 3.3 On first sign-in, upsert `profiles` row with `id = clerkUserId` and defaults.
+   - [x] 3.4 Create helper `upsertProfileFromClerk()` to sync email/name/avatar if available.
+   - [ ] 3.5 Verify RLS policies work end-to-end with Clerk-authenticated requests.
+- [ ] 4.0 Implement multi-step onboarding wizard with validation and progress persistence
+   - [ ] 4.1 Create `app/onboarding/index.tsx` with stepper and progress indicator.
+   - [ ] 4.2 Step 1 Basic Info: name, age, sex (`UserInfo` + form validation).
+   - [ ] 4.3 Step 2 Measurements: height, weight (support metric/imperial entry).
+   - [ ] 4.4 Step 3 Activity: choose from sedentary/light/moderate/heavy/athlete.
+   - [ ] 4.5 Step 4 Preferences: units (metric/imperial) and dark mode opt-in.
+   - [ ] 4.6 Persist in-progress state to `SecureStore` or `AsyncStorage` to resume.
+   - [ ] 4.7 Back/Next navigation with per-step validation and disabled Next until valid.
+- [ ] 5.0 Sync onboarding data to Supabase `profiles` and load on sign-in
+   - [ ] 5.1 Create `saveOnboarding.ts` util to map form state to `profiles` columns.
+   - [ ] 5.2 Upsert `profiles` with height/weight/activity/use_metric_units and timestamps.
+   - [ ] 5.3 After completion, clear local onboarding cache and navigate to `(tabs)`.
+   - [ ] 5.4 On app start (if signed in), fetch profile; if incomplete, redirect to onboarding.
+- [ ] 6.0 Apply full app branding/theme to Clerk components and auth screens
+   - [ ] 6.1 Create a Clerk theme that uses `constants/colors.ts` and app typography.
+   - [ ] 6.2 Apply brand logo from `assets/images/brand-logo.png` to auth screens.
+   - [ ] 6.3 Ensure consistent spacing and button styles using `app/components/` primitives.
+   - [ ] 6.4 Verify dark mode support if enabled in preferences.
+- [ ] 7.0 Add logout control in Profile/Settings and clear local caches on sign-out
+   - [ ] 7.1 Add a Logout button in Profile/Settings screen that calls `signOut()`.
+   - [ ] 7.2 After logout, navigate to `(auth)/sign-in` and clear onboarding caches.
+   - [ ] 7.3 Ensure any in-memory stores reset on logout (e.g., goals/foods stores).
+- [ ] 8.0 Implement robust error handling, retry logic, and onboarding resume behavior
+   - [ ] 8.1 Standardize error surface: user-friendly messages for auth/db failures.
+   - [ ] 8.2 Implement retry w/ exponential backoff for transient network errors.
+   - [ ] 8.3 Persist onboarding progress after each step to allow resume on relaunch.
+   - [ ] 8.4 Add global error boundary or fallback UI around auth flows.
+- [ ] 9.0 Instrument analytics/metrics for success criteria (signup/signin/onboarding completion)
+   - [ ] 9.1 Emit events: `auth_sign_up_success`, `auth_sign_in_success`, `onboarding_complete`.
+   - [ ] 9.2 Track failures and recovery attempts for error rate metrics.
+   - [ ] 9.3 Create dashboard queries or logs to estimate completion rates and timings.
+- [ ] 10.0 Testing and QA: unit tests, E2E updates, and smoke flows for auth/onboarding
+   - [ ] 10.1 Unit tests for onboarding validation and state persistence.
+   - [ ] 10.2 Integration tests for profile upsert and data loading on sign-in.
+   - [ ] 10.3 E2E updates in `e2e/smoke.spec.ts` to cover sign-in and onboarding path.
+   - [ ] 10.4 Manual QA checklist across iOS/Android simulators and dark/light modes.
