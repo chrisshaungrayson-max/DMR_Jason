@@ -29,6 +29,7 @@ import * as Haptics from 'expo-haptics';
 import ViewShot, { captureRef, captureScreen } from 'react-native-view-shot';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import RadarChart from './components/RadarChart';
+import ImageExportButton from './components/ImageExportButton';
 
 export default function TDEEResultsScreen() {
   const router = useRouter();
@@ -702,6 +703,14 @@ export default function TDEEResultsScreen() {
       fontWeight: '600',
       marginLeft: 4,
     },
+    saveImageButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#D4A574',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
     infoTable: {
       backgroundColor: '#fff',
       borderRadius: 8,
@@ -917,6 +926,20 @@ export default function TDEEResultsScreen() {
               {isExporting ? 'Exporting...' : 'Export'}
             </Text>
           </Pressable>
+
+          <ImageExportButton
+            viewRef={exportViewRef}
+            title="Save Image"
+            style={styles.saveImageButton}
+            captureOptions={{
+              format: 'jpg',
+              quality: 0.8,
+              result: 'tmpfile'
+            }}
+            saveOptions={{
+              album: 'TDEE Reports'
+            }}
+          />
           
           <Pressable 
             style={({ pressed }) => [

@@ -32,7 +32,8 @@
         "android.permission.VIBRATE",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
       ]
     },
     "web": {
@@ -49,6 +50,14 @@
         "expo-image-picker",
         {
           "photosPermission": "The app accesses your photos to let you share them with your friends."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to save images to your photo library.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save images to your photo library.",
+          "isAccessMediaLocationEnabled": true
         }
       ]
     ],
