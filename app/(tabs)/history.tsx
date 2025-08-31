@@ -14,6 +14,7 @@ import EmptyState from '@/app/components/EmptyState';
 import StreakHeatmap from '@/app/components/StreakHeatmap';
 import { strings } from '@/utils/strings';
 import { buildProteinCompliance, toWeeklyGrid } from '@/utils/streak';
+import { Box, Button, ButtonText } from '@gluestack-ui/themed';
 
 export default function HistoryScreen() {
   const { dailyRecords, isLoading } = useNutritionStore();
@@ -136,6 +137,13 @@ export default function HistoryScreen() {
         headerStyle: { backgroundColor: theme.cardBackground },
         headerTintColor: theme.darkText,
       }} />
+
+      {/* Gluestack UI demo */}
+      <Box p="$4" mx="$4" my="$3" testID="gluestack-demo">
+        <Button action="primary" onPress={() => console.log('Gluestack button pressed')}>
+          <ButtonText>Gluestack UI Connected</ButtonText>
+        </Button>
+      </Box>
       {/* Analytics: Weekly Trend */}
       <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
         <TrendLineChart
