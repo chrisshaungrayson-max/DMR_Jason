@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useNutritionStore } from '@/store/nutrition-store';
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, Share2, TrendingUp, TrendingDown, Check, Download, Save } from 'lucide-react-native';
-import { generateNutritionData } from '@/utils/nutrition-api';
 import { NutritionItem, NutritionEntry } from '@/types/nutrition';
 import { categorizeMealByHour, combineDateWithNow } from '@/utils/datetime';
 import * as Haptics from 'expo-haptics';

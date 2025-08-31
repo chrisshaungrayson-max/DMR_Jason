@@ -19,7 +19,7 @@ const { height } = Dimensions.get('window');
 import { Calendar, Plus, X, Check, AlertCircle } from 'lucide-react-native';
 import { useUser } from '@/store/user-store';
 import Colors from '@/constants/colors';
-import { analyzeFoodEntry, formatNutritionalInfo, type NutritionalInfo } from '@/services/foodAnalysis';
+import { analyzeFoodEntry, formatNutritionalInfo, type FoodAnalysisResult } from '@/services/foodAnalysis';
 import CustomDatePicker from './CustomDatePicker';
 import { useFoodsStore } from '@/store/foods-store';
 
@@ -28,7 +28,7 @@ import { useFoodsStore } from '@/store/foods-store';
 type FoodLogPopoverProps = {
   visible: boolean;
   onClose: () => void;
-  onLogFood: (food: string, date: Date, nutritionInfo?: NutritionalInfo) => void;
+  onLogFood: (food: string, date: Date, nutritionInfo?: FoodAnalysisResult) => void;
 };
 
 export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogPopoverProps) {
@@ -36,7 +36,7 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<NutritionalInfo | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<FoodAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -107,17 +107,19 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
             text: 'Save to My Foods',
             onPress: async () => {
               try {
+                const firstItem = result.items && result.items[0];
+                if (!firstItem) {
+                  Alert.alert('Error', 'No analyzed items to save.');
+                  return;
+                }
                 await saveFood({
-                  name: result.food || foodText,
-                  brand: undefined,
-                  portion: result.servingSize,
-                  calories: result.calories,
-                  protein: result.protein,
-                  carbs: result.carbs,
-                  fat: result.fat,
-                  tags: [],
+                  name: firstItem.name || foodText,
+                  calories: firstItem.calories,
+                  protein: firstItem.protein,
+                  carbs: firstItem.carbs,
+                  fat: firstItem.fat,
                   meta: { source: 'analysis' },
-                } as any);
+                });
                 Alert.alert('Saved', 'Food saved to your catalog.');
               } catch (e) {
                 console.warn('Save food failed', e);

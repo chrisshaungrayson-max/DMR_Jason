@@ -7,6 +7,7 @@ import Colors from "@/constants/colors";
 import { useUser } from "@/store/user-store";
 import FoodLogPopover from "@/app/components/FoodLogPopover";
 import TDEEActionModal from "@/app/components/TDEEActionModal";
+import type { FoodAnalysisResult } from "@/services/foodAnalysis";
 
 export default function TabLayout() {
   const router = useRouter();
@@ -42,35 +43,17 @@ export default function TabLayout() {
   const [showActionModal, setShowActionModal] = useState(false);
   const [showFoodLog, setShowFoodLog] = useState(false);
   
-  const handleLogFood = async (food: string, date: Date, nutritionInfo?: any) => {
+  const handleLogFood = async (food: string, date: Date, nutritionInfo?: FoodAnalysisResult) => {
     try {
       if (!nutritionInfo) {
         Alert.alert('Error', 'Could not analyze food. The analysis service may be down.');
         return;
       }
 
-      const result = {
-        items: [
-          {
-            name: nutritionInfo.food ?? food,
-            calories: nutritionInfo.calories ?? 0,
-            protein: nutritionInfo.protein ?? 0,
-            carbs: nutritionInfo.carbs ?? 0,
-            fat: nutritionInfo.fat ?? 0,
-          },
-        ],
-        total: {
-          calories: nutritionInfo.calories ?? 0,
-          protein: nutritionInfo.protein ?? 0,
-          carbs: nutritionInfo.carbs ?? 0,
-          fat: nutritionInfo.fat ?? 0,
-        },
-      };
-
       router.push({
         pathname: '/results',
         params: {
-          macros: JSON.stringify(result),
+          macros: JSON.stringify(nutritionInfo),
           date: date.toISOString(),
           foodList: food,
         },

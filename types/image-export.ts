@@ -42,6 +42,12 @@ export interface SaveToLibraryOptions {
   album?: string;
   /** Filename for the saved image */
   filename?: string;
+  /** Preferred save method; default is 'auto' which tries createAsset first, then falls back */
+  method?: 'auto' | 'createAsset' | 'saveToLibrary';
+  /** Timeout in ms for the save step before attempting a fallback */
+  timeoutMs?: number;
+  /** Number of retries for the primary save method before fallback */
+  retries?: number;
 }
 
 /**
@@ -94,6 +100,7 @@ export type ExportErrorType =
   | 'permission_denied'
   | 'capture_failed'
   | 'save_failed'
+  | 'save_timeout'
   | 'unknown_error';
 
 /**
@@ -135,6 +142,10 @@ export interface ImageExportButtonProps {
   onExportSuccess?: (result: SaveToLibraryResult) => void;
   /** Callback when export fails */
   onExportError?: (error: ExportError) => void;
+  /** Optional: Prepare target view before capture (e.g., mount hidden export view) */
+  onBeforeCapture?: () => Promise<void> | void;
+  /** Optional: Cleanup target view after capture/save */
+  onAfterCapture?: () => Promise<void> | void;
   /** Image capture options */
   captureOptions?: Partial<ImageCaptureOptions>;
   /** Save options */

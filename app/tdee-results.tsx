@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
   calculateMacroTargets,
 } from '@/utils/tdee-calculations';
 import { generateTDEETextSummary, TDEEExportData } from '@/utils/tdee-export';
+import { exportViewAsImage, getDevicePerformanceTier } from '@/utils/tdee-image-export';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
 import ViewShot, { captureRef, captureScreen } from 'react-native-view-shot';
@@ -751,17 +752,42 @@ export default function TDEEResultsScreen() {
     return new Promise<T>((resolve, reject) => {
       const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
       promise.then(
-        (val) => {
+        (result) => {
           clearTimeout(t);
-          resolve(val);
+          resolve(result);
         },
-        (err) => {
+        (error) => {
           clearTimeout(t);
-          reject(err);
+          reject(error);
         }
       );
     });
   }
+
+  // Get device-appropriate timeout values
+  function getDeviceTimeouts() {
+    const deviceTier = getDevicePerformanceTier();
+    return {
+      fullExport: deviceTier === 'high' ? 8000 : deviceTier === 'medium' ? 12000 : 18000,
+      visibleCapture: deviceTier === 'high' ? 6000 : deviceTier === 'medium' ? 9000 : 15000,
+      screenCapture: deviceTier === 'high' ? 5000 : deviceTier === 'medium' ? 8000 : 12000
+    };
+  }
+
+  // Hooks used by ImageExportButton to prepare/cleanup the hidden export view
+  const prepareExportView = useCallback(async () => {
+    setIsCapturingExport(true);
+    // Give RN a frame to render the hidden export view before capture
+    await new Promise<void>((resolve) => {
+      InteractionManager.runAfterInteractions(() => {
+        requestAnimationFrame(() => setTimeout(resolve, 120));
+      });
+    });
+  }, []);
+
+  const cleanupExportView = useCallback(() => {
+    setIsCapturingExport(false);
+  }, []);
 
   // Export handlers
   const handleExport = async () => {
@@ -786,14 +812,18 @@ export default function TDEEResultsScreen() {
 
       if (exportViewRef.current) {
         try {
+          const timeouts = getDeviceTimeouts();
+          const deviceTier = getDevicePerformanceTier();
+          const exportQuality = deviceTier === 'high' ? 1 : deviceTier === 'medium' ? 0.9 : 0.8;
+          
           const uri = await withTimeout(
             captureRef(exportViewRef.current, {
               format: 'png',
-              quality: 1,
+              quality: exportQuality,
               result: 'tmpfile',
               fileName: `tdee-results-${Date.now()}`,
             }),
-            7000,
+            timeouts.fullExport,
             'Full export capture'
           );
           // Remove overlay and spinner before opening share sheet so UI isn't stuck
@@ -816,14 +846,18 @@ export default function TDEEResultsScreen() {
       // As a fallback, capture the currently visible screen
       try {
         if (viewShotRef.current?.capture) {
+          const timeouts = getDeviceTimeouts();
+          const deviceTier = getDevicePerformanceTier();
+          const captureQuality = deviceTier === 'high' ? 1 : deviceTier === 'medium' ? 0.9 : 0.8;
+          
           const uri: string = await withTimeout(
             viewShotRef.current.capture({
               format: 'png',
-              quality: 1,
+              quality: captureQuality,
               result: 'tmpfile',
               fileName: `tdee-results-${Date.now()}`,
             }),
-            6000,
+            timeouts.visibleCapture,
             'Visible capture'
           );
           setIsExporting(false);
@@ -839,9 +873,13 @@ export default function TDEEResultsScreen() {
         console.warn('Visible screen capture failed, trying captureScreen:', err);
       }
 
+      const timeouts = getDeviceTimeouts();
+      const deviceTier = getDevicePerformanceTier();
+      const screenQuality = deviceTier === 'high' ? 1 : deviceTier === 'medium' ? 0.9 : 0.8;
+      
       const uri = await withTimeout(
-        captureScreen({ format: 'png', quality: 1, result: 'tmpfile' }),
-        6000,
+        captureScreen({ format: 'png', quality: screenQuality, result: 'tmpfile' }),
+        timeouts.screenCapture,
         'Device screen capture'
       );
       setIsExporting(false);
@@ -931,6 +969,8 @@ export default function TDEEResultsScreen() {
             viewRef={exportViewRef}
             title="Save Image"
             style={styles.saveImageButton}
+            onBeforeCapture={prepareExportView}
+            onAfterCapture={cleanupExportView}
             captureOptions={{
               format: 'jpg',
               quality: 0.8,
