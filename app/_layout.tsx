@@ -10,6 +10,8 @@ import { UserContext, useUser } from "@/store/user-store";
 import { StatusBar } from "expo-status-bar";
 import { FoodsProvider } from "@/store/foods-store";
 import { GoalsContext } from "@/store/goals-store";
+import { GluestackUIProvider } from "@gluestack-ui/themed";
+import { config } from "@gluestack-ui/config";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -42,9 +44,11 @@ function AppProviders() {
         <GoalsContext>
           <NutritionProvider>
             <FoodsProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
+              <GluestackUIProvider config={config}>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </GluestackUIProvider>
             </FoodsProvider>
           </NutritionProvider>
         </GoalsContext>
