@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, Heading } from '@gluestack-ui/themed';
 import Colors from '@/constants/colors';
 
 export type EmptyStateProps = {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, KeyboardAvoidingView, Platform, Pressable, Modal, Image, Switch } from 'react-native';
+import { StyleSheet, TextInput, ScrollView, KeyboardAvoidingView, Platform, Modal, Image, Switch, View, Text as RNText } from 'react-native';
+import { Text, Heading, Box, VStack, HStack, Pressable } from '@gluestack-ui/themed';
 import { useNutritionStore } from '@/store/nutrition-store';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Alert } from 'react-native';
@@ -15,10 +16,14 @@ import Colors from '@/constants/colors';
 import { useUser } from '@/store/user-store';
 import { useGoals } from '@/store/goals-store';
 import GoalCard from '@/app/components/GoalCard';
+import HomeMacrosRadialChart from '@/app/components/HomeMacrosRadialChart';
 import EmptyState from '@/app/components/EmptyState';
 import DevPanel from '@/app/components/DevPanel';
+import LogFoodCard from '@/app/components/LogFoodCard';
 import { strings } from '@/utils/strings';
 import { analyzeFoodEntry } from '@/services/foodAnalysis';
+import LogFoodOverlayModal from '@/app/components/LogFoodOverlayModal';
+import { track } from '@/utils/track';
 
 export default function HomePage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -30,6 +35,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showLogFoodOverlay, setShowLogFoodOverlay] = useState(false);
 
   const { userInfo, setUserInfo, dailyRecords } = useNutritionStore();
   const { colorScheme } = useUser();
@@ -232,48 +238,16 @@ export default function HomePage() {
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Header */}
-        <View style={styles.header}>
-          <Image 
-            source={{ uri: 'https://r2-pub.rork.com/attachments/nbnzfjpejlkyi4jjvjdzc' }}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={[styles.logo, { color: theme.text }]}>{getGreeting()}</Text>
-          <Pressable 
-            style={styles.headerProfile}
-            onPress={handleEditProfile}
-            testID="header-profile-button"
-          >
-            {userInfo.profilePicture ? (
-              <Image 
-                source={{ uri: userInfo.profilePicture }}
-                style={styles.headerProfileImage}
-              />
-            ) : (
-              <View style={styles.headerProfilePlaceholder}>
-                <Text style={styles.headerProfileInitials}>
-                  {userInfo.name ? getInitials(userInfo.name) : 'U'}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-
-        {/* Weekly Streak Widget */}
-        <View style={styles.streakWidget}>
-          <View style={styles.streakContent}>
-            <View style={styles.streakIconContainer}>
-              <View style={styles.streakIcon}>
-                <Text style={styles.streakNumber}>{getWeeklyStreak()}</Text>
-              </View>
-            </View>
-            <View style={styles.streakTextContainer}>
-              <Text style={styles.streakTitle}>Weekly Streak</Text>
-              <Text style={styles.streakSubtitle}>{getWeeklyStreak()} days logged this week</Text>
-            </View>
-            <View style={styles.streakProgress}>
+        <Box style={[styles.header, { backgroundColor: theme.cardBackground }]}>
+          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.subtitle}>Track your nutrition goals</Text>
+          
+          {/* Weekly Streak */}
+          <Box style={styles.streakContainer}>
+            <Text style={styles.streakTitle}>Weekly Streak</Text>
+            <HStack space="xs" alignItems="center" mt="$2">
               {[...Array(7)].map((_, index) => (
-                <View 
+                <Box 
                   key={index} 
                   style={[
                     styles.streakDot,
@@ -281,102 +255,77 @@ export default function HomePage() {
                   ]} 
                 />
               ))}
-            </View>
-          </View>
-        </View>
+              <Text style={styles.streakCount}>{getWeeklyStreak()}/7 days</Text>
+            </HStack>
+          </Box>
+        </Box>
+
+        {/* Home Macros Radial Chart */}
+        <HomeMacrosRadialChart />
 
         {/* Your Goals */}
-        <View style={[styles.goalsSection, { backgroundColor: theme.cardBackground }]}>
-          <Text style={styles.sectionTitle}>Your Goals</Text>
+        <Box style={[styles.goalsSection, { backgroundColor: theme.cardBackground }]}>
+          <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Your Goals</Heading>
           {goalsLoading ? (
-            <Text style={styles.goalsEmptyText}>Loading goals…</Text>
+            <Text color="$textLight400" $dark-color="$textDark400" fontSize="$sm">Loading goals…</Text>
           ) : visibleGoals.length === 0 ? (
             <EmptyState
               title={strings.empty.goals.title}
               description={strings.empty.goals.description}
               actionLabel={strings.empty.goals.actionLabel}
-              onAction={() => router.push('/(tabs)/profile')}
+              onAction={() => {
+                track('home_goals_empty_cta_tap');
+                setShowLogFoodOverlay(true);
+              }}
               themeMode={isDarkMode ? 'dark' : 'light'}
               testID="goals-empty"
               actionHint={strings.empty.goals.actionHint}
             />
           ) : (
-            <View style={styles.goalsList}>
+            <Box style={styles.goalsList}>
               {visibleGoals.map((g: any) => (
                 <GoalCard key={g.id} goal={g} progress={progressFor(g.id)} />
               ))}
-            </View>
+            </Box>
           )}
-        </View>
+        </Box>
 
-        {/* Food Entry Section */}
-        <View style={[styles.foodEntryCard, { backgroundColor: theme.cardBackground }]}>
-          <Text style={styles.sectionTitle}>Log Your Food</Text>
-          <Pressable 
-            onPress={() => setShowDatePicker(true)} 
-            style={[styles.datePickerButton, { backgroundColor: Platform.OS === 'ios' ? theme.cardBackground : theme.cardBackground, borderColor: '#ddd' }]}
-          >
-            <Text style={[styles.datePickerText, { color: theme.text }]}>
-              {selectedDate.toLocaleDateString(undefined, { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </Text>
-          </Pressable>
-          {showDatePicker && (
-            <View style={styles.datePickerContainer}>
-              <View style={styles.datePickerHeader}>
-                <Text style={[styles.datePickerTitle, { color: theme.text }]}>Select Date</Text>
-                <Pressable 
-                  onPress={() => {
-                    // Simulate a 'set' event to close the picker properly
-                    onDateChange({ type: 'set' }, selectedDate);
-                  }}
-                  style={styles.datePickerDoneButton}
-                >
-                  <Text style={[styles.datePickerDoneText, { color: theme.tint }]}>Done</Text>
-                </Pressable>
-              </View>
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onDateChange}
-                themeVariant={isDarkMode ? 'dark' : 'light'}
-                style={styles.dateTimePicker}
-                textColor={Platform.OS === 'ios' ? (isDarkMode ? '#fff' : '#000') : undefined}
-              />
-            </View>
-          )}
-          <TextInput
-            style={[
-              styles.foodInput,
-              {
-                backgroundColor: Platform.OS === 'ios' ? (isDarkMode ? '#1e1e1e' : '#f8f8f8') : (isDarkMode ? '#1e1e1e' : '#fafafa'),
-                color: theme.text,
-                borderColor: isDarkMode ? theme.border : '#ddd',
-              },
-            ]}
-            placeholder="Enter food items (e.g., 2 eggs, 1 toast)"
-            value={foodEntry}
-            onChangeText={setFoodEntry}
-            multiline
-            testID="food-entry-input"
-          />
-          <Pressable 
-            style={({ pressed }) => [
-              styles.logFoodButton,
-              pressed && Platform.OS === 'ios' && styles.addButtonPressed
-            ]}
-            onPress={handleLogFood}
-            disabled={loading}
-            testID="log-food-button"
-          >
-            <Text style={styles.logFoodButtonText}>{loading ? 'Analyzing...' : 'Log Food'}</Text>
-          </Pressable>
-        </View>
+        {/* Food Entry Section (Card) */}
+        <LogFoodCard
+          value={foodEntry}
+          onChangeText={setFoodEntry}
+          onSubmit={handleLogFood}
+          loading={loading}
+          selectedDate={selectedDate}
+          onOpenDatePicker={() => setShowDatePicker(true)}
+          isDarkMode={isDarkMode}
+          theme={theme}
+        />
+        {showDatePicker && (
+          <Box style={styles.datePickerContainer}>
+            <Box style={styles.datePickerHeader}>
+              <Text color="$textLight0" $dark-color="$textDark0" fontSize="$lg" fontWeight="$semibold">Select Date</Text>
+              <Pressable 
+                onPress={() => {
+                  // Simulate a 'set' event to close the picker properly
+                  onDateChange({ type: 'set' }, selectedDate);
+                }}
+                style={styles.datePickerDoneButton}
+              >
+                <Text color="$primary500" fontSize="$md" fontWeight="$semibold">Done</Text>
+              </Pressable>
+            </Box>
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onDateChange}
+              themeVariant={isDarkMode ? 'dark' : 'light'}
+              style={styles.dateTimePicker}
+              textColor={Platform.OS === 'ios' ? (isDarkMode ? '#fff' : '#000') : undefined}
+            />
+          </Box>
+        )}
 
         {/* Add New Entry Modal */}
         <AddEntryModal 
@@ -384,44 +333,60 @@ export default function HomePage() {
           onClose={() => setShowAddEntryModal(false)} 
         />
 
+        {/* Log Food Overlay Modal (from Goals empty state CTA) */}
+        <LogFoodOverlayModal
+          visible={showLogFoodOverlay}
+          onClose={() => setShowLogFoodOverlay(false)}
+          onLogFood={(food, date, nutritionInfo) => {
+            router.push({
+              pathname: '/results',
+              params: {
+                macros: JSON.stringify(nutritionInfo),
+                date: date.toISOString(),
+                foodList: food,
+              },
+            });
+          }}
+        />
+
         {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionGrid}>
+        <Box style={styles.quickActions}>
+          <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Quick Actions</Heading>
+          <Box style={styles.actionGrid}>
             {/* Edit Profile removed as requested */}
-          </View>
-        </View>
+          </Box>
+        </Box>
 
         {/* History Section */}
-        <View style={styles.historySection}>
-          <Text style={styles.sectionTitle}>History</Text>
+        <Box style={styles.historySection}>
+          <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">History</Heading>
           {dailySummaries.length === 0 ? (
-            <Text style={styles.noHistoryText}>No history yet. Log your first entry!</Text>
+            <Text color="$textLight400" $dark-color="$textDark400" fontSize="$sm" textAlign="center">No history yet. Log your first entry!</Text>
           ) : (
-            <View style={styles.historyTable}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, { flex: 2 }]}>Date</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1 }]}>Calories</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1 }]}>Protein</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1 }]}>Carbs</Text>
-                <Text style={[styles.tableHeaderText, { flex: 1 }]}>Fat</Text>
-              </View>
+            <Box style={styles.historyTable}>
+              <Box style={styles.tableHeader}>
+                <Text color="$textLight600" $dark-color="$textDark600" fontSize="$xs" fontWeight="$semibold" flex={2}>Date</Text>
+                <Text color="$textLight600" $dark-color="$textDark600" fontSize="$xs" fontWeight="$semibold" flex={1}>Calories</Text>
+                <Text color="$textLight600" $dark-color="$textDark600" fontSize="$xs" fontWeight="$semibold" flex={1}>Protein</Text>
+                <Text color="$textLight600" $dark-color="$textDark600" fontSize="$xs" fontWeight="$semibold" flex={1}>Carbs</Text>
+                <Text color="$textLight600" $dark-color="$textDark600" fontSize="$xs" fontWeight="$semibold" flex={1}>Fat</Text>
+              </Box>
               {dailySummaries.slice(0, 5).map((summary, index) => (
                 <Pressable 
                   key={summary.date} 
                   style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}
                   onPress={() => handleHistoryItemPress(summary)}
                 >
-                  <Text style={[styles.tableCell, { flex: 2 }]}>{formatDateForDisplay(summary.date)}</Text>
-                  <Text style={[styles.tableCell, { flex: 1 }]}>{summary.total.calories}</Text>
-                  <Text style={[styles.tableCell, { flex: 1 }]}>{summary.total.protein}g</Text>
-                  <Text style={[styles.tableCell, { flex: 1 }]}>{summary.total.carbs}g</Text>
-                  <Text style={[styles.tableCell, { flex: 1 }]}>{summary.total.fat}g</Text>
+                  <Text color="$textLight0" $dark-color="$textDark0" fontSize="$sm" flex={2}>{formatDateForDisplay(summary.date)}</Text>
+                  <Text color="$textLight0" $dark-color="$textDark0" fontSize="$sm" flex={1}>{summary.total.calories}</Text>
+                  <Text color="$textLight0" $dark-color="$textDark0" fontSize="$sm" flex={1}>{summary.total.protein}g</Text>
+                  <Text color="$textLight0" $dark-color="$textDark0" fontSize="$sm" flex={1}>{summary.total.carbs}g</Text>
+                  <Text color="$textLight0" $dark-color="$textDark0" fontSize="$sm" flex={1}>{summary.total.fat}g</Text>
                 </Pressable>
               ))}
-            </View>
+            </Box>
           )}
-        </View>
+        </Box>
 
         {/* Dev Panel - only shows in development */}
         <DevPanel />
@@ -435,24 +400,24 @@ export default function HomePage() {
         onRequestClose={() => setShowProfileModal(false)}
         presentationStyle="overFullScreen"
       >
-        <View style={styles.modalOverlay}>
+        <Box style={styles.modalOverlay}>
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalKeyboardView}
           >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Edit Profile</Text>
+            <Box style={styles.modalContent}>
+              <Box style={styles.modalHeader}>
+                <Heading size="lg" color="$textLight0" $dark-color="$textDark0">Edit Profile</Heading>
                 <Pressable 
                   onPress={() => setShowProfileModal(false)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Text style={styles.modalButton}>Done</Text>
+                  <Text color="$primary500" fontSize="$md" fontWeight="$semibold">Done</Text>
                 </Pressable>
-              </View>
+              </Box>
               
               <ScrollView style={styles.modalScrollView}>
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.fieldLabel}>Name</Text>
                   <TextInput
                     style={styles.textInput}
@@ -461,35 +426,35 @@ export default function HomePage() {
                     onChangeText={(value) => updateUserInfo('name', value)}
                     testID="name-input"
                   />
-                </View>
+                </Box>
                 
                 {/* Profile Picture Section */}
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.fieldLabel}>Profile Picture</Text>
                   <Pressable 
                     style={styles.profilePictureButton}
                     onPress={handleImagePicker}
                     testID="profile-picture-button"
                   >
-                    <View style={styles.profilePictureContainer}>
+                    <Box style={styles.profilePictureContainer}>
                       {userInfo.profilePicture ? (
                         <Image 
                           source={{ uri: userInfo.profilePicture }}
                           style={styles.profilePicturePreview}
                         />
                       ) : (
-                        <View style={styles.profilePicturePlaceholder}>
+                        <Box style={styles.profilePicturePlaceholder}>
                           <Camera size={32} color="#BBA46E" />
                           <Text style={styles.profilePictureText}>Tap to upload</Text>
-                        </View>
+                        </Box>
                       )}
-                    </View>
+                    </Box>
                   </Pressable>
-                </View>
+                </Box>
 
                 {/* Metric Units Toggle */}
-                <View style={styles.formField}>
-                  <View style={styles.toggleRow}>
+                <Box style={styles.formField}>
+                  <Box style={styles.toggleRow}>
                     <Text style={styles.fieldLabel}>Use Metric Units</Text>
                     <Switch
                       value={userInfo.useMetricUnits}
@@ -498,13 +463,13 @@ export default function HomePage() {
                       thumbColor={userInfo.useMetricUnits ? '#fff' : '#f4f3f4'}
                       testID="metric-toggle"
                     />
-                  </View>
-                </View>
+                  </Box>
+                </Box>
 
-                <View style={styles.formRow}>
-                  <View style={styles.formFieldHalf}>
+                <Box style={styles.formRow}>
+                  <Box style={styles.formFieldHalf}>
                     <Text style={styles.fieldLabel}>Age</Text>
-                    <View style={styles.pickerContainer}>
+                    <Box style={styles.pickerContainer}>
                       <Picker
                         selectedValue={selectedAge}
                         onValueChange={(value) => {
@@ -519,12 +484,12 @@ export default function HomePage() {
                           <Picker.Item key={age} label={age} value={age} />
                         ))}
                       </Picker>
-                    </View>
-                  </View>
+                    </Box>
+                  </Box>
                   
-                  <View style={styles.formFieldHalf}>
+                  <Box style={styles.formFieldHalf}>
                     <Text style={styles.fieldLabel}>Sex</Text>
-                    <View style={styles.sexSelector}>
+                    <Box style={styles.sexSelector}>
                       {['male', 'female', 'other'].map((sex) => (
                         <Pressable
                           key={sex}
@@ -542,12 +507,12 @@ export default function HomePage() {
                           </Text>
                         </Pressable>
                       ))}
-                    </View>
-                  </View>
-                </View>
+                    </Box>
+                  </Box>
+                </Box>
                 
-                <View style={styles.formRow}>
-                  <View style={styles.formFieldHalf}>
+                <Box style={styles.formRow}>
+                  <Box style={styles.formFieldHalf}>
                     <Text style={styles.fieldLabel}>Height</Text>
                     <TextInput
                       style={styles.textInput}
@@ -556,9 +521,9 @@ export default function HomePage() {
                       onChangeText={(value) => updateUserInfo('height', value)}
                       testID="height-input"
                     />
-                  </View>
+                  </Box>
                   
-                  <View style={styles.formFieldHalf}>
+                  <Box style={styles.formFieldHalf}>
                     <Text style={styles.fieldLabel}>Weight</Text>
                     <TextInput
                       style={styles.textInput}
@@ -567,12 +532,12 @@ export default function HomePage() {
                       onChangeText={(value) => updateUserInfo('weight', value)}
                       testID="weight-input"
                     />
-                  </View>
-                </View>
+                  </Box>
+                </Box>
                 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.fieldLabel}>Activity Level</Text>
-                  <View style={styles.pickerContainer}>
+                  <Box style={styles.pickerContainer}>
                     <Picker
                       selectedValue={userInfo.activityLevel || 'sedentary'}
                       onValueChange={(value) => updateUserInfo('activityLevel', value)}
@@ -585,10 +550,10 @@ export default function HomePage() {
                       <Picker.Item label="Heavy Activity (6-7 days/week)" value="heavy" />
                       <Picker.Item label="Athlete-Level (2x training/day)" value="athlete" />
                     </Picker>
-                  </View>
-                </View>
+                  </Box>
+                </Box>
                 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.fieldLabel}>Email Address</Text>
                   <TextInput
                     style={styles.textInput}
@@ -599,9 +564,9 @@ export default function HomePage() {
                     autoCapitalize="none"
                     testID="email-input"
                   />
-                </View>
+                </Box>
                 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.fieldLabel}>Phone Number (Optional)</Text>
                   <TextInput
                     style={styles.textInput}
@@ -611,11 +576,11 @@ export default function HomePage() {
                     keyboardType="phone-pad"
                     testID="phone-input"
                   />
-                </View>
+                </Box>
               </ScrollView>
-            </View>
+            </Box>
           </KeyboardAvoidingView>
-        </View>
+        </Box>
       </Modal>
 
       {/* History Detail Modal */}
@@ -625,57 +590,57 @@ export default function HomePage() {
         animationType="fade"
         onRequestClose={() => setShowHistoryModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.historyModalContent}>
-            <View style={styles.modalHeader}>
+        <Box style={styles.modalOverlay}>
+          <Box style={styles.historyModalContent}>
+            <Box style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Day Summary - {selectedHistoryEntry && formatDateForDisplay(selectedHistoryEntry.date || '')}</Text>
               <Pressable onPress={() => setShowHistoryModal(false)}>
                 <Text style={styles.modalButton}>Close</Text>
               </Pressable>
-            </View>
+            </Box>
             
             {selectedHistoryEntry && (
               <ScrollView style={styles.historyDetailScroll}>
-                <View style={styles.summaryCard}>
+                <Box style={styles.summaryCard}>
                   <Text style={styles.summaryTitle}>Total for the Day</Text>
-                  <View style={styles.summaryRow}>
+                  <Box style={styles.summaryRow}>
                     <Text style={styles.summaryMacro}>Calories: {selectedHistoryEntry.total.calories}</Text>
                     <Text style={styles.summaryMacro}>Protein: {selectedHistoryEntry.total.protein}g</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
+                  </Box>
+                  <Box style={styles.summaryRow}>
                     <Text style={styles.summaryMacro}>Carbs: {selectedHistoryEntry.total.carbs}g</Text>
                     <Text style={styles.summaryMacro}>Fat: {selectedHistoryEntry.total.fat}g</Text>
-                  </View>
-                </View>
+                  </Box>
+                </Box>
 
                 <Text style={styles.entriesTitle}>Entries</Text>
                 {selectedHistoryEntry.entries.map((entry: any, index: number) => (
-                  <View key={index} style={styles.entryItem}>
+                  <Box key={index} style={styles.entryItem}>
                     <Text style={styles.entryFoodList}>{entry.foodList}</Text>
-                    <View style={styles.entryMacros}>
+                    <Box style={styles.entryMacros}>
                       <Text style={styles.entryMacroText}>Cal: {entry.total.calories}</Text>
                       <Text style={styles.entryMacroText}>P: {entry.total.protein}g</Text>
                       <Text style={styles.entryMacroText}>C: {entry.total.carbs}g</Text>
                       <Text style={styles.entryMacroText}>F: {entry.total.fat}g</Text>
-                    </View>
+                    </Box>
                     <Text style={styles.entryDetailsTitle}>Items:</Text>
                     {entry.items.map((item: any, itemIndex: number) => (
-                      <View key={itemIndex} style={styles.itemDetail}>
+                      <Box key={itemIndex} style={styles.itemDetail}>
                         <Text style={styles.itemName}>{item.name}</Text>
-                        <View style={styles.itemMacros}>
+                        <Box style={styles.itemMacros}>
                           <Text style={styles.itemMacroText}>Cal: {item.calories}</Text>
                           <Text style={styles.itemMacroText}>P: {item.protein}g</Text>
                           <Text style={styles.itemMacroText}>C: {item.carbs}g</Text>
                           <Text style={styles.itemMacroText}>F: {item.fat}g</Text>
-                        </View>
-                      </View>
+                        </Box>
+                      </Box>
                     ))}
-                  </View>
+                  </Box>
                 ))}
               </ScrollView>
             )}
-          </View>
-        </View>
+          </Box>
+        </Box>
       </Modal>
     </View>
   );
@@ -691,11 +656,32 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    padding: 20,
     marginBottom: 24,
     marginTop: 20,
+    borderRadius: 12,
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: 'bold' as const,
+    color: '#000',
+    marginBottom: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica' : 'sans-serif',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 16,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica' : 'sans-serif',
+  },
+  streakContainer: {
+    marginTop: 8,
+  },
+  streakCount: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 8,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica' : 'sans-serif',
   },
   logoImage: {
     width: 50,
@@ -755,11 +741,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   logFoodButton: {
-    backgroundColor: '#BBA46E',
     borderRadius: Platform.OS === 'ios' ? 12 : 8,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 50,
+    marginTop: 16,
   },
   logFoodButtonText: {
     color: '#fff',

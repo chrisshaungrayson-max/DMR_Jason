@@ -24,7 +24,9 @@ export default defineConfig({
       'app/**/__tests__/**/*.test.ts',
       'app/**/__tests__/**/*.test.tsx',
       'utils/__tests__/**/*.test.ts',
-      'utils/__tests__/**/*.test.tsx'
+      'utils/__tests__/**/*.test.tsx',
+      'lib/__tests__/**/*.test.ts',
+      'lib/__tests__/**/*.test.tsx'
     ],
   },
 });

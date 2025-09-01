@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Text, Heading } from '@gluestack-ui/themed';
 import Colors from '@/constants/colors';
 import { useUser } from '@/store/user-store';
 import { clearNutritionCache } from '@/utils/maintenance';
@@ -52,7 +53,7 @@ export default function DevPanel() {
         onPress={handleClearCache}
         disabled={isClearing}
       >
-        <Text style={[styles.buttonText, { color: theme.background }]}>
+        <Text color="$white" fontSize="$md" fontWeight="$semibold">
           {isClearing ? 'Clearing...' : 'Clear Nutrition Cache'}
         </Text>
       </TouchableOpacity>
@@ -69,7 +70,7 @@ export default function DevPanel() {
           setAuthUid(uid);
         }}
       >
-        <Text style={[styles.buttonText, { color: theme.background }]}>Get auth.uid() from Supabase</Text>
+        <Text color="$white" fontSize="$md" fontWeight="$semibold">Get auth.uid() from Supabase</Text>
       </TouchableOpacity>
       {authUid !== null && (
         <Text style={{ color: theme.darkText, marginBottom: 8 }}>auth.uid(): {authUid || '(null)'}</Text>
@@ -86,7 +87,7 @@ export default function DevPanel() {
           }
         }}
       >
-        <Text style={[styles.buttonText, { color: theme.background }]}>Probe RLS (profiles)</Text>
+        <Text color="$white" fontSize="$md" fontWeight="$semibold">Probe RLS (profiles)</Text>
       </TouchableOpacity>
       {rlsResult && (
         <Text style={{ color: theme.darkText }}>{rlsResult}</Text>

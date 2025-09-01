@@ -4,7 +4,7 @@ import { UserInfo } from '@/types/user';
 export const DEFAULT_MACRO_SPLIT = { protein: 30, carbs: 40, fat: 30 } as const;
 
 // Caloric densities (kcal per gram)
-const KCAL_PER_GRAM = { protein: 4, carbs: 4, fat: 9 } as const;
+export const KCAL_PER_GRAM = { protein: 4, carbs: 4, fat: 9 } as const;
 
 // Fallback average daily calories by sex
 export function getFallbackCaloriesBySex(sex: UserInfo['sex']): number {
@@ -98,4 +98,48 @@ export function getIdealMacrosForUser(user: UserInfo, split: MacroSplit = DEFAUL
   const grams = splitToGrams(calories, split);
   const percents = gramsToPercents(grams);
   return { calories, grams, percents };
+}
+
+// ---- Task 3.1: helpers with precedence (Target Calories > TDEE > gender fallback) ----
+export type CalorieSource = 'input' | 'tdee' | 'fallback';
+
+export function resolveCalorieTarget(user: UserInfo, targetCalories?: number): { calories: number; source: CalorieSource } {
+  if (typeof targetCalories === 'number' && isFinite(targetCalories) && targetCalories > 0) {
+    return { calories: Math.round(targetCalories), source: 'input' };
+  }
+  const tdee = computeTDEE(user);
+  if (tdee && isFinite(tdee) && tdee > 0) {
+    return { calories: tdee, source: 'tdee' };
+  }
+  return { calories: getFallbackCaloriesBySex(user.sex), source: 'fallback' };
+}
+
+export function getMacroTargetsForUser(
+  user: UserInfo,
+  options?: { targetCalories?: number; split?: MacroSplit }
+): {
+  calories: number;
+  grams: MacroGrams;
+  percents: MacroSplit;
+  split: MacroSplit;
+  source: CalorieSource;
+} {
+  const { targetCalories, split = DEFAULT_MACRO_SPLIT } = options ?? {};
+  const { calories, source } = resolveCalorieTarget(user, targetCalories);
+  const grams = splitToGrams(calories, split);
+  const percents = gramsToPercents(grams);
+  return { calories, grams, percents, split, source };
+}
+
+// Conversions between grams and calories (Task 3.3)
+export function gramsToCalories(grams: MacroGrams): number {
+  return (
+    grams.protein * KCAL_PER_GRAM.protein +
+    grams.carbs * KCAL_PER_GRAM.carbs +
+    grams.fat * KCAL_PER_GRAM.fat
+  );
+}
+
+export function caloriesToGrams(calories: number, split: MacroSplit): MacroGrams {
+  return splitToGrams(calories, split);
 }

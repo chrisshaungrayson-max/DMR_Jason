@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Text, Heading, Pressable } from '@gluestack-ui/themed';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useUser } from '@/store/user-store';
@@ -12,6 +13,7 @@ import { generateReportHTML } from '@/utils/pdf';
 import { loadImageAsDataUrl } from '@/utils/assets';
 import { formatDateLabel, normalizeNutritionItems } from '@/utils/report';
 import RadarChart from './components/RadarChart';
+import SegmentedTabs from './components/SegmentedTabs';
 
 function ceil(n: number) { return Math.ceil(n || 0); }
 
@@ -118,14 +120,20 @@ export default function ResultsPopover() {
       <View onStartShouldSetResponder={() => true} style={[styles.modalCard, { backgroundColor: theme.cardBackground }]}>
         <View style={[styles.headerRow, { borderBottomColor: isDarkMode ? '#444' : '#e2e2e2' }]}>
           <Text style={[styles.title, { color: theme.darkText }]}>{displayDate}</Text>
-          <View style={[styles.tabRow, { backgroundColor: `${theme.lightGold}33` } ]}>
-            <TouchableOpacity onPress={() => setActiveTab('list')} style={[styles.tabBtn, { borderColor: theme.tint }, activeTab === 'list' ? [styles.tabActive, { backgroundColor: theme.tint }] : null]}>
-              <Text style={[styles.tabText, { color: activeTab === 'list' ? theme.background : theme.darkText }]}>List</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setActiveTab('analytics')} style={[styles.tabBtn, { borderColor: theme.tint }, activeTab === 'analytics' ? [styles.tabActive, { backgroundColor: theme.tint }] : null]}>
-              <Text style={[styles.tabText, { color: activeTab === 'analytics' ? theme.background : theme.darkText }]}>Analytics</Text>
-            </TouchableOpacity>
-          </View>
+          <SegmentedTabs
+            options={[
+              { label: 'List', value: 'list', testID: 'list-tab' },
+              { label: 'Analytics', value: 'analytics', testID: 'analytics-tab' },
+            ]}
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as 'list' | 'analytics')}
+            containerStyle={[styles.tabRow, { backgroundColor: `${theme.lightGold}33` }]}
+            activeColor={theme.tint}
+            activeTextColor={theme.background}
+            inactiveTextColor={theme.darkText}
+            trackColor={`${theme.lightGold}33`}
+            borderRadius={24}
+          />
         </View>
         <ScrollView contentContainerStyle={styles.content}>
           {activeTab === 'list' ? (
@@ -193,7 +201,7 @@ export default function ResultsPopover() {
             <>
               {/* Analytics */}
               <View style={styles.analyticsSection}>
-                <Text style={[styles.sectionTitle, { color: theme.darkText }]}>Macro Distribution</Text>
+                <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Macro Distribution</Heading>
                 {/* Radar: Ideal vs Actual */}
                 <View style={[styles.analyticsSection, { backgroundColor: `${theme.lightGold}33`, alignItems: 'center' }]}>
                   <RadarChart
@@ -229,7 +237,7 @@ export default function ResultsPopover() {
                     <Text style={[styles.pctLabel, { color: theme.lightText }]}>Fat {pct.F}%</Text>
                   </View>
                 </View>
-                <Text style={[styles.sectionTitle, { color: theme.darkText, marginTop: 16 }]}>Macro Goals vs Consumed (%)</Text>
+                <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Macro Goals vs Consumed (%)</Heading>
                 <View style={styles.barRow}>
                   {/* reuse same bars for simplicity; in main Results these map to goal bars */}
                   {['Protein','Carbs','Fat'].map((label, index) => {

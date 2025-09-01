@@ -1,17 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  Platform,
-  Alert,
-  Share,
-  Dimensions,
-  ActivityIndicator,
-  InteractionManager,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Platform, Alert, Share, Dimensions, ActivityIndicator, InteractionManager,  } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Share2, Download, Calculator } from 'lucide-react-native';
 import { useUser } from '@/store/user-store';

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { DEFAULT_MACRO_SPLIT, type MacroSplit } from '@/lib/idealMacros';
 
 export type MacroTargets = {
   id: string;
@@ -43,4 +44,23 @@ export async function upsertMyMacroTargets(input: UpsertMacroTargetsInput): Prom
     .single();
   if (error) throw error;
   return data as MacroTargets;
+}
+
+// Fetch macro split for current user; fallback to default split if none or invalid
+export async function getMyMacroSplitOrDefault(): Promise<MacroSplit> {
+  const record = await getMyMacroTargets();
+  if (!record) return { ...DEFAULT_MACRO_SPLIT };
+  const p = Number(record.split_protein);
+  const c = Number(record.split_carbs);
+  const f = Number(record.split_fat);
+  if (![p, c, f].every((n) => Number.isFinite(n) && n >= 0)) return { ...DEFAULT_MACRO_SPLIT };
+  const total = p + c + f;
+  if (total === 100) return { protein: p, carbs: c, fat: f };
+  if (total > 0) {
+    const protein = Math.round((p / total) * 100);
+    const carbs = Math.round((c / total) * 100);
+    const fat = Math.max(0, 100 - (protein + carbs));
+    return { protein, carbs, fat };
+  }
+  return { ...DEFAULT_MACRO_SPLIT };
 }

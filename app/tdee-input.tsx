@@ -1,17 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  Platform,
-  Alert,
-  KeyboardAvoidingView,
-  PanResponder,
-  Animated,
-} from 'react-native';
+import { View, ScrollView, StyleSheet, Platform, Alert, KeyboardAvoidingView } from 'react-native';
+import { Text, Heading, Input, InputField, Pressable, Slider, SliderTrack, SliderFilledTrack, SliderThumb } from '@gluestack-ui/themed';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Calculator } from 'lucide-react-native';
 import { useUser } from '@/store/user-store';
@@ -35,20 +24,7 @@ export default function TDEEInputScreen() {
   const [gender, setGender] = useState<'male' | 'female' | 'other'>(userInfo.sex || 'male');
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
-  const [bodyFat, setBodyFat] = useState('15');
-  const sliderWidth = 280;
-  const thumbPosition = useRef(new Animated.Value(0)).current;
-  
-  // Pan responder for slider
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderMove: (evt, gestureState) => {
-      const newValue = Math.max(0, Math.min(50, (gestureState.moveX / sliderWidth) * 50));
-      setBodyFat(Math.round(newValue).toString());
-      thumbPosition.setValue((newValue / 50) * sliderWidth);
-    },
-  });
+  const [bodyFat, setBodyFat] = useState(15);
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(userInfo.activityLevel || 'moderate');
   const [selectedGoals, setSelectedGoals] = useState<FitnessGoal[]>([]);
   const [isMetric, setIsMetric] = useState(true);
@@ -113,7 +89,7 @@ export default function TDEEInputScreen() {
           gender,
           height: parsedHeight.toString(),
           weight: parsedWeight.toString(),
-          bodyFat: bodyFat || '0',
+          bodyFat: bodyFat.toString(),
           activityLevel,
           goals: JSON.stringify(selectedGoals),
           isMetric: isMetric.toString(),
@@ -367,25 +343,47 @@ export default function TDEEInputScreen() {
           
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.textInput}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter your name"
-              placeholderTextColor={theme.placeholder}
-            />
+            <Input
+              variant="outline"
+              size="md"
+              borderColor="$borderLight300"
+              $dark-borderColor="$borderDark700"
+              backgroundColor="$backgroundLight0"
+              $dark-backgroundColor="$backgroundDark950"
+            >
+              <InputField
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter your name"
+                color="$textLight900"
+                $dark-color="$textDark100"
+                placeholderTextColor="$textLight400"
+                $dark-placeholderTextColor="$textDark400"
+              />
+            </Input>
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Age</Text>
-            <TextInput
-              style={styles.textInput}
-              value={age}
-              onChangeText={setAge}
-              placeholder="Enter your age"
-              placeholderTextColor={theme.placeholder}
-              keyboardType="numeric"
-            />
+            <Input
+              variant="outline"
+              size="md"
+              borderColor="$borderLight300"
+              $dark-borderColor="$borderDark700"
+              backgroundColor="$backgroundLight0"
+              $dark-backgroundColor="$backgroundDark950"
+            >
+              <InputField
+                value={age}
+                onChangeText={setAge}
+                placeholder="Enter your age"
+                keyboardType="numeric"
+                color="$textLight900"
+                $dark-color="$textDark100"
+                placeholderTextColor="$textLight400"
+                $dark-placeholderTextColor="$textDark400"
+              />
+            </Input>
           </View>
 
           <View style={styles.inputContainer}>
@@ -439,51 +437,71 @@ export default function TDEEInputScreen() {
             <Text style={styles.label}>
               Height {isMetric ? '(cm)' : '(e.g., 5\'10" or 70")'}
             </Text>
-            <TextInput
-              style={styles.textInput}
-              value={height}
-              onChangeText={setHeight}
-              placeholder={isMetric ? "175" : "5'10\""}
-              placeholderTextColor={theme.placeholder}
-              keyboardType="numeric"
-            />
+            <Input
+              variant="outline"
+              size="md"
+              borderColor="$borderLight300"
+              $dark-borderColor="$borderDark700"
+              backgroundColor="$backgroundLight0"
+              $dark-backgroundColor="$backgroundDark950"
+            >
+              <InputField
+                value={height}
+                onChangeText={setHeight}
+                placeholder={isMetric ? "e.g., 175" : "e.g., 5'10\" or 70\""}
+                color="$textLight900"
+                $dark-color="$textDark100"
+                placeholderTextColor="$textLight400"
+                $dark-placeholderTextColor="$textDark400"
+              />
+            </Input>
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>
               Weight {isMetric ? '(kg)' : '(lbs)'}
             </Text>
-            <TextInput
-              style={styles.textInput}
-              value={weight}
-              onChangeText={setWeight}
-              placeholder={isMetric ? "70" : "154"}
-              placeholderTextColor={theme.placeholder}
-              keyboardType="numeric"
-            />
+            <Input
+              variant="outline"
+              size="md"
+              borderColor="$borderLight300"
+              $dark-borderColor="$borderDark700"
+              backgroundColor="$backgroundLight0"
+              $dark-backgroundColor="$backgroundDark950"
+            >
+              <InputField
+                value={weight}
+                onChangeText={setWeight}
+                placeholder={isMetric ? "e.g., 70" : "e.g., 155"}
+                keyboardType="numeric"
+                color="$textLight900"
+                $dark-color="$textDark100"
+                placeholderTextColor="$textLight400"
+                $dark-placeholderTextColor="$textDark400"
+              />
+            </Input>
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Body Fat % (optional)</Text>
             <View style={styles.sliderContainer}>
-              <Text style={styles.sliderValue}>{bodyFat || '15'}%</Text>
-              <View style={styles.sliderTrack} {...panResponder.panHandlers}>
-                <View style={styles.sliderFill} />
-                <Animated.View 
-                  style={[
-                    styles.sliderThumb,
-                    {
-                      transform: [{
-                        translateX: thumbPosition.interpolate({
-                          inputRange: [0, sliderWidth],
-                          outputRange: [0, sliderWidth - 20],
-                          extrapolate: 'clamp',
-                        })
-                      }]
-                    }
-                  ]}
-                />
-              </View>
+              <Text style={styles.sliderValue}>{bodyFat}%</Text>
+              <Slider
+                value={bodyFat}
+                onChange={(value) => setBodyFat(value)}
+                minValue={0}
+                maxValue={50}
+                step={1}
+                size="md"
+                orientation="horizontal"
+                isDisabled={false}
+                isReversed={false}
+              >
+                <SliderTrack>
+                  <SliderFilledTrack />
+                </SliderTrack>
+                <SliderThumb />
+              </Slider>
               <View style={styles.sliderLabels}>
                 <Text style={styles.sliderLabel}>0%</Text>
                 <Text style={styles.sliderLabel}>50%</Text>

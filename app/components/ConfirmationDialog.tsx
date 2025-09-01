@@ -3,19 +3,22 @@
  */
 
 import React from 'react';
-import {
-  Modal,
-  View,
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { 
+  AlertDialog,
+  AlertDialogBackdrop,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogCloseButton,
+  AlertDialogBody,
+  AlertDialogFooter,
   Text,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
-import { BlurView } from 'expo-blur';
+  Button,
+  ButtonText,
+  CloseIcon
+} from '@gluestack-ui/themed';
 import { ConfirmationDialogProps } from '@/types/image-export';
 
-const { width: screenWidth } = Dimensions.get('window');
 
 export function ConfirmationDialog({
   visible,
@@ -28,89 +31,61 @@ export function ConfirmationDialog({
   loading = false,
 }: ConfirmationDialogProps) {
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onCancel}
-      statusBarTranslucent
-    >
-      <BlurView intensity={20} style={styles.overlay}>
-        <View style={styles.container}>
-          <View style={styles.dialog}>
-            {/* Title */}
-            <Text style={styles.title}>{title}</Text>
+    <AlertDialog isOpen={visible} onClose={onCancel}>
+      <AlertDialogBackdrop />
+      <AlertDialogContent style={styles.dialog}>
+        <AlertDialogHeader>
+          <Text style={styles.title}>{title}</Text>
+          <AlertDialogCloseButton>
+            <CloseIcon />
+          </AlertDialogCloseButton>
+        </AlertDialogHeader>
+        
+        <AlertDialogBody>
+          <Text style={styles.message}>{message}</Text>
+        </AlertDialogBody>
+        
+        <AlertDialogFooter>
+          <View style={styles.buttonContainer}>
+            <Button
+              variant="outline"
+              style={styles.cancelButton}
+              onPress={onCancel}
+              isDisabled={loading}
+            >
+              <ButtonText style={styles.cancelButtonText}>{cancelText}</ButtonText>
+            </Button>
             
-            {/* Message */}
-            <Text style={styles.message}>{message}</Text>
-            
-            {/* Buttons */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onCancel}
-                disabled={loading}
-                accessibilityLabel={cancelText}
-                accessibilityRole="button"
-              >
-                <Text style={styles.cancelButtonText}>{cancelText}</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton, loading && styles.disabledButton]}
-                onPress={onConfirm}
-                disabled={loading}
-                accessibilityLabel={confirmText}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: loading }}
-              >
-                <View style={styles.confirmButtonContent}>
-                  {loading && (
-                    <ActivityIndicator 
-                      size="small" 
-                      color="#FFFFFF" 
-                      style={styles.loadingIcon}
-                    />
-                  )}
-                  <Text style={styles.confirmButtonText}>
-                    {loading ? 'Saving...' : confirmText}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+            <Button
+              style={[styles.confirmButton, loading && styles.disabledButton]}
+              onPress={onConfirm}
+              isDisabled={loading}
+            >
+              <View style={styles.confirmButtonContent}>
+                {loading && (
+                  <ActivityIndicator 
+                    size="small" 
+                    color="#FFFFFF" 
+                    style={styles.loadingIcon}
+                  />
+                )}
+                <ButtonText style={styles.confirmButtonText}>
+                  {loading ? 'Saving...' : confirmText}
+                </ButtonText>
+              </View>
+            </Button>
           </View>
-        </View>
-      </BlurView>
-    </Modal>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  container: {
-    width: screenWidth - 40,
-    maxWidth: 400,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   dialog: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
+    maxWidth: 400,
   },
   title: {
     fontSize: 18,
@@ -130,21 +105,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  button: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-  },
   cancelButton: {
-    backgroundColor: '#F5F5F5',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    flex: 1,
+    marginRight: 6,
   },
   confirmButton: {
+    flex: 1,
+    marginLeft: 6,
     backgroundColor: '#D4A574',
   },
   disabledButton: {

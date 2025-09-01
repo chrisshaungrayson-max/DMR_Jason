@@ -1,18 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { 
-  Platform, 
-  StyleSheet, 
-  Text, 
-  View, 
-  TextInput, 
-  ScrollView, 
-  Pressable, 
-  KeyboardAvoidingView,
-  Alert,
-  Modal,
-  TouchableOpacity
-} from 'react-native';
+import { Platform, StyleSheet, View, ScrollView, KeyboardAvoidingView, Alert, TouchableOpacity } from 'react-native';
+import { Text, Heading, Input, InputField, Pressable, Modal, ModalBackdrop, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter, CloseIcon } from '@gluestack-ui/themed';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNutritionStore } from '@/store/nutrition-store';
 
@@ -94,6 +83,8 @@ export default function AddEntryModal({ visible, onClose }: AddEntryModalProps) 
         // Placeholder values for nutritional data
         addNutritionEntry({
           date: selectedDate.toISOString().split('T')[0],
+          timestamp: selectedDate.toISOString(),
+          mealType: 'snack',
           foodList: food.trim(),
           items: [{
             name: food.trim(),
@@ -130,21 +121,17 @@ export default function AddEntryModal({ visible, onClose }: AddEntryModalProps) 
   };
 
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={handleClose}
-    >
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add Nutrition Entry</Text>
-            <Pressable onPress={handleClose} style={styles.closeButton}>
-              <X size={24} color="#000" />
-            </Pressable>
-          </View>
+    <Modal isOpen={visible} onClose={handleClose}>
+      <ModalBackdrop />
+      <ModalContent style={styles.modalContent}>
+          <ModalHeader>
+            <Heading size="lg" color="$textLight0" $dark-color="$textDark0">Add Nutrition Entry</Heading>
+            <ModalCloseButton>
+              <CloseIcon />
+            </ModalCloseButton>
+          </ModalHeader>
           
+          <ModalBody>
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardView}
@@ -156,20 +143,20 @@ export default function AddEntryModal({ visible, onClose }: AddEntryModalProps) 
             >
               {/* Date Selector */}
               <View style={styles.inputContainer}>
-                <Text style={[styles.label, { color: '#666' }]}>Date</Text>
+                <Text color="$textLight400" $dark-color="$textDark400" fontSize="$sm" fontWeight="$semibold">Date</Text>
                 <Pressable 
                   onPress={showDatePickerModal}
                   style={[styles.dateButton, { backgroundColor: '#fff' }]}
                 >
                   <Calendar size={16} color="#666" style={styles.calendarIcon} />
-                  <Text style={[styles.dateText, { color: '#666' }]}>
+                  <Text color="$textLight400" $dark-color="$textDark400" fontSize="$md">
                     {dateString}
                   </Text>
                 </Pressable>
                 {showDatePicker && (
                   <View style={styles.datePickerWrapper}>
                     <View style={styles.datePickerHeader}>
-                      <Text style={styles.datePickerTitle}>Select Date</Text>
+                      <Text color="$textLight0" $dark-color="$textDark0" fontSize="$md" fontWeight="$semibold">Select Date</Text>
                       <Pressable 
                         onPress={() => {
                           // Simulate a 'set' event to close the picker properly
@@ -177,7 +164,7 @@ export default function AddEntryModal({ visible, onClose }: AddEntryModalProps) 
                         }}
                         style={styles.datePickerDoneButton}
                       >
-                        <Text style={styles.datePickerDoneText}>Done</Text>
+                        <Text color="$primary500" fontSize="$md" fontWeight="$semibold">Done</Text>
                       </Pressable>
                     </View>
                     <DateTimePicker
@@ -193,63 +180,60 @@ export default function AddEntryModal({ visible, onClose }: AddEntryModalProps) 
 
               {/* Food List Input */}
               <View style={styles.entriesContainer}>
-                <Text style={styles.sectionTitle}>Food Items</Text>
-                <Text style={styles.sectionSubtitle}>Enter each food item on a new line</Text>
+                <Heading size="md" color="$textLight0" $dark-color="$textDark0" mb="$1">Food Items</Heading>
+                <Text color="$textLight400" $dark-color="$textDark400" fontSize="$sm" mb="$3">Enter each food item on a new line</Text>
                 <View style={styles.formField}>
-                  <TextInput
-                    style={[styles.textInput, { height: 200 }]}
-                    placeholder="e.g., Grilled Chicken Breast\nBrown Rice\nBroccoli"
-                    value={foodList}
-                    onChangeText={setFoodList}
-                    multiline
-                    testID="food-list-input"
-                  />
+                  <Input
+                    variant="outline"
+                    size="md"
+                    h={200}
+                    borderColor="$borderLight300"
+                    $dark-borderColor="$borderDark700"
+                    backgroundColor="$backgroundLight0"
+                    $dark-backgroundColor="$backgroundDark950"
+                  >
+                    <InputField
+                      placeholder="e.g., Grilled Chicken Breast\nBrown Rice\nBroccoli"
+                      value={foodList}
+                      onChangeText={setFoodList}
+                      multiline
+                      color="$textLight900"
+                      $dark-color="$textDark100"
+                      placeholderTextColor="$textLight400"
+                      $dark-placeholderTextColor="$textDark400"
+                      testID="food-list-input"
+                    />
+                  </Input>
                 </View>
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
+          </ModalBody>
           
-          <View style={styles.buttonContainer}>
+          <ModalFooter>
             <Pressable 
               onPress={handleSave} 
               style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
               disabled={isSubmitting}
             >
-              <Text style={[styles.saveButtonText, isSubmitting && styles.saveButtonTextDisabled]}>
+              <Text color="$white" fontSize="$md" fontWeight="$semibold">
                 {isSubmitting ? 'Saving...' : 'Save'}
               </Text>
             </Pressable>
-          </View>
+          </ModalFooter>
           
           <StatusBar style="dark" />
-        </View>
-      </View>
+      </ModalContent>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalView: {
-    margin: 20,
+  modalContent: {
     backgroundColor: '#EEE7DF',
     borderRadius: 20,
-    padding: 20,
     width: '90%',
-    maxHeight: '50%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    maxHeight: '80%',
   },
   datePickerWrapper: {
     backgroundColor: '#fff',

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { Text, Heading } from '@gluestack-ui/themed';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function AuthScreen() {
@@ -40,39 +41,52 @@ export default function AuthScreen() {
     if (error) Alert.alert('Sign out failed', error.message);
   };
 
+  if (userId) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Welcome!</Text>
+        <Text color="$textLight400" $dark-color="$textDark400" fontSize="$sm">
+          You are signed in as: {userId}
+        </Text>
+        <TouchableOpacity style={[styles.btn, styles.outline]} onPress={signOut} disabled={loading}>
+          <Text color="$white" fontSize="$md" fontWeight="$semibold">Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Supabase Auth</Text>
-      <Text style={styles.subtitle}>{userId ? `Signed in as ${userId}` : 'Not signed in'}</Text>
-
+      <Text color="$textLight400" $dark-color="$textDark400" fontSize="$sm">
+        Sign in to your account
+      </Text>
+      
       <TextInput
+        style={styles.input}
         placeholder="Email"
-        autoCapitalize="none"
         value={email}
         onChangeText={setEmail}
-        style={styles.input}
         keyboardType="email-address"
+        autoCapitalize="none"
       />
+      
       <TextInput
+        style={styles.input}
         placeholder="Password"
-        secureTextEntry
         value={password}
         onChangeText={setPassword}
-        style={styles.input}
+        secureTextEntry
       />
-
+      
       <View style={styles.row}>
-        <TouchableOpacity onPress={signIn} disabled={loading} style={[styles.btn, styles.primary]}> 
+        <TouchableOpacity style={[styles.btn, styles.primary]} onPress={signIn} disabled={loading}>
           <Text style={styles.btnText}>Sign In</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={signUp} disabled={loading} style={[styles.btn, styles.secondary]}> 
+        <TouchableOpacity style={[styles.btn, styles.secondary]} onPress={signUp} disabled={loading}>
           <Text style={styles.btnText}>Sign Up</Text>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity onPress={signOut} disabled={loading || !userId} style={[styles.btn, styles.outline]}> 
-        <Text style={styles.btnText}>Sign Out</Text>
-      </TouchableOpacity>
     </View>
   );
 }

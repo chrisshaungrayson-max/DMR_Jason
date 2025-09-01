@@ -1,19 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
-  Text, 
   TextInput, 
-  Pressable, 
   StyleSheet, 
   ActivityIndicator, 
   Alert, 
   Keyboard, 
-  TouchableWithoutFeedback, 
   Dimensions,
   KeyboardAvoidingView,
   Platform,
   FlatList
 } from 'react-native';
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  Text,
+  Pressable,
+  CloseIcon
+} from '@gluestack-ui/themed';
 
 const { height } = Dimensions.get('window');
 import { Calendar, Plus, X, Check, AlertCircle } from 'lucide-react-native';
@@ -155,7 +164,6 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
     }
   };
 
-  if (!visible) return null;
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -175,12 +183,13 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
 
     return (
       <>
-        <View style={styles.header}>
+        <ModalHeader>
           <Text style={[styles.title, { color: theme.text }]}>Log Food</Text>
-          <Pressable onPress={onClose} style={styles.closeButton}>
-            <X size={24} color={theme.text} />
-          </Pressable>
-        </View>
+          <ModalCloseButton>
+            <CloseIcon />
+          </ModalCloseButton>
+        </ModalHeader>
+        <ModalBody>
         
         {/* Date Picker */}
         <View style={styles.inputContainer}>
@@ -241,77 +250,54 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
           )}
         </View>
 
+        </ModalBody>
+        
         {/* Actions */}
-        <View style={styles.buttonContainer}>
-          <Pressable
-            style={[styles.cancelButton, { borderColor: theme.border }]}
-            onPress={onClose}
-            disabled={isAnalyzing}
-          >
-            <Text style={[styles.cancelButtonText, { color: theme.text }]}>Cancel</Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.submitButton,
-              { 
-                backgroundColor: foodText.trim() ? theme.tint : theme.disabled,
-                opacity: foodText.trim() ? 1 : 0.7,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }
-            ]}
-            onPress={handleSubmit}
-            disabled={!foodText.trim() || isAnalyzing}
-          >
-            {isAnalyzing ? (
-              <ActivityIndicator color="white" style={styles.buttonSpinner} />
-            ) : (
-              <Check size={18} color="white" style={styles.checkIcon} />
-            )}
-            <Text style={styles.submitButtonText}>
-              {isAnalyzing ? 'Analyzing...' : 'Log Food'}
-            </Text>
-          </Pressable>
-        </View>
+        <ModalFooter>
+          <View style={styles.buttonContainer}>
+            <Pressable
+              style={[styles.cancelButton, { borderColor: theme.border }]}
+              onPress={onClose}
+              disabled={isAnalyzing}
+            >
+              <Text style={[styles.cancelButtonText, { color: theme.text }]}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.submitButton,
+                { 
+                  backgroundColor: foodText.trim() ? theme.tint : theme.disabled,
+                  opacity: foodText.trim() ? 1 : 0.7,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }
+              ]}
+              onPress={handleSubmit}
+              disabled={!foodText.trim() || isAnalyzing}
+            >
+              {isAnalyzing ? (
+                <ActivityIndicator color="white" style={styles.buttonSpinner} />
+              ) : (
+                <Check size={18} color="white" style={styles.checkIcon} />
+              )}
+              <Text style={styles.submitButtonText}>
+                {isAnalyzing ? 'Analyzing...' : 'Log Food'}
+              </Text>
+            </Pressable>
+          </View>
+        </ModalFooter>
       </>
     );
   }
 
   // Define styles in a single StyleSheet.create block
   const styles = StyleSheet.create({
-    container: {
-      ...StyleSheet.absoluteFillObject,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      zIndex: 1000,
-    },
-    overlay: {
-      ...StyleSheet.absoluteFillObject,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    backgroundPressable: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    popover: {
+    modalContent: {
       width: '90%',
       maxWidth: 400,
       borderRadius: 16,
-      padding: 24,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 5,
       maxHeight: '80%',
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 16,
     },
     title: {
       fontSize: 20,
@@ -495,31 +481,16 @@ export default function FoodLogPopover({ visible, onClose, onLogFood }: FoodLogP
   });
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
-      <TouchableWithoutFeedback onPress={dismissKeyboard}>
-        <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
-          <Pressable 
-            style={styles.backgroundPressable} 
-            onPress={onClose}
-          />
-          <View 
-            style={[
-              styles.popover, 
-              { 
-                backgroundColor: theme.background,
-                maxHeight: isAnalyzing ? 200 : undefined,
-              }
-            ]}
-            onStartShouldSetResponder={() => true}
-          >
-            {renderContent()}
-          </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+    <Modal isOpen={visible} onClose={onClose}>
+      <ModalBackdrop />
+      <ModalContent style={[styles.modalContent, { backgroundColor: theme.background }]}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          {renderContent()}
+        </KeyboardAvoidingView>
+      </ModalContent>
+    </Modal>
   );
 }

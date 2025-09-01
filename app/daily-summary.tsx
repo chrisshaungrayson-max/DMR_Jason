@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Text, Heading, Pressable } from '@gluestack-ui/themed';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { useNutritionStore } from '@/store/nutrition-store';
 import Colors from '@/constants/colors';
@@ -208,7 +209,7 @@ const formatDateForDisplay = (dateString: string) => {
             </View>
           </View>
           <View style={styles.analyticsSection}>
-            <Text style={[styles.sectionTitle, { color: theme.darkText }]}>Analytics</Text>
+            <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Analytics</Heading>
             {(() => {
               const P = Math.round(record.total.protein);
               const C = Math.round(record.total.carbs);

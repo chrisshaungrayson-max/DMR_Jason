@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text, Heading } from '@gluestack-ui/themed';
 
 export default function PhoneVerificationScreen() {
   return (

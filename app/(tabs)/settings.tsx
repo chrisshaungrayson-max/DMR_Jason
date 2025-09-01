@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, Switch, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Switch, TouchableOpacity, Alert } from 'react-native';
+import { Text, Heading, Pressable, Box, VStack } from '@gluestack-ui/themed';
 import React, { useState } from 'react';
 import { ChevronRight, LogOut } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -80,10 +81,10 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: theme.darkText }]}>Preferences</Text>
+      <VStack space="md" p="$4">
+        <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Preferences</Heading>
         
-        <View style={[styles.settingRow, { borderBottomColor: theme.border }]}>
+        <Box style={[styles.settingRow, { borderBottomColor: theme.border }]}>
           <Text style={[styles.settingLabel, { color: theme.darkText }]}>Notifications</Text>
           <Switch
             trackColor={{ false: theme.border, true: theme.lightGold }}
@@ -92,9 +93,9 @@ export default function SettingsScreen() {
             value={notifications}
             testID="notifications-switch"
           />
-        </View>
+        </Box>
         
-        <View style={[styles.settingRow, { borderBottomColor: theme.border }]}>
+        <Box style={[styles.settingRow, { borderBottomColor: theme.border }]}>
           <Text style={[styles.settingLabel, { color: theme.darkText }]}>Dark Mode</Text>
           <Switch
             trackColor={{ false: theme.border, true: theme.lightGold }}
@@ -103,9 +104,9 @@ export default function SettingsScreen() {
             value={user.useDarkMode}
             testID="dark-mode-switch"
           />
-        </View>
+        </Box>
         
-        <View style={[styles.settingRow, { borderBottomColor: theme.border }]}>
+        <Box style={[styles.settingRow, { borderBottomColor: theme.border }]}>
           <Text style={[styles.settingLabel, { color: theme.darkText }]}>Use Metric Units</Text>
           <Switch
             trackColor={{ false: theme.border, true: theme.lightGold }}
@@ -114,11 +115,11 @@ export default function SettingsScreen() {
             value={user.useMetricUnits}
             testID="metric-units-switch"
           />
-        </View>
-      </View>
+        </Box>
+      </VStack>
       
-      <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: theme.darkText }]}>Account</Text>
+      <VStack space="md" p="$4">
+        <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Account</Heading>
         
         <TouchableOpacity 
           style={[styles.linkRow, { borderBottomColor: theme.border }]}
@@ -143,10 +144,10 @@ export default function SettingsScreen() {
           <Text style={[styles.settingLabel, { color: theme.darkText }]}>Connected Apps</Text>
           <ChevronRight size={20} color={theme.lightText} />
         </TouchableOpacity>
-      </View>
+      </VStack>
       
-      <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: theme.darkText }]}>Support</Text>
+      <VStack space="md" p="$4">
+        <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Support</Heading>
         
         <TouchableOpacity 
           style={[styles.linkRow, { borderBottomColor: theme.border }]}
@@ -171,7 +172,7 @@ export default function SettingsScreen() {
           <Text style={[styles.settingLabel, { color: theme.darkText }]}>Terms of Service</Text>
           <ChevronRight size={20} color={theme.lightText} />
         </TouchableOpacity>
-      </View>
+      </VStack>
       
       <TouchableOpacity 
         style={[styles.logoutButton, { backgroundColor: theme.cardBackground }]}

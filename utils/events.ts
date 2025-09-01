@@ -5,11 +5,12 @@
 //   events.emit('nutrition:changed', payload);
 //   off(); // to unsubscribe
 
-export type EventKey = 'nutrition:changed' | 'measurements:changed';
+export type EventKey = 'nutrition:changed' | 'measurements:changed' | 'analytics:track';
 
 export type EventPayloads = {
   'nutrition:changed': { date?: string } | void;
   'measurements:changed': { goalId?: string } | void;
+  'analytics:track': { event: string; props?: Record<string, any> };
 };
 
 type Listener = (payload: any) => void;

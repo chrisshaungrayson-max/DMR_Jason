@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text, Heading, Card, Box, HStack, VStack } from '@gluestack-ui/themed';
 import Colors from '@/constants/colors';
 import type { GoalRecord, GoalProgress } from '@/types/goal';
 
@@ -22,77 +23,79 @@ export default function GoalCard({ goal, progress }: GoalCardProps) {
   const theme = Colors.light; // cards follow light theme by default; container should adapt at screen level if needed
 
   return (
-    <View
-      style={[styles.card, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}
+    <Card
+      backgroundColor="$backgroundLight0"
+      $dark-backgroundColor="$backgroundDark950"
+      borderColor="$borderLight300"
+      $dark-borderColor="$borderDark700"
+      borderWidth={1}
+      borderRadius="$lg"
+      p="$3"
+      mb="$3"
       testID={`goal-card-${goal.id}`}
     >
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: theme.darkText }]} numberOfLines={1}>
+      <HStack alignItems="center" justifyContent="space-between" flex={1} mb="$2">
+        <Text color="$textLight900" $dark-color="$textDark100" fontSize="$md" fontWeight="$semibold" flex={1} mr="$2" numberOfLines={1}>
           {renderTitle(goal)}
         </Text>
-        <View style={[styles.badge, { backgroundColor: theme.gold }]}>
-          <Text style={styles.badgeText} testID={`goal-badge-${goal.type}`}>{typeLabel[goal.type]}</Text>
-        </View>
-      </View>
-
-      <Text style={[styles.meta, { color: theme.lightText }]}>Status: {renderStatus(goal)}</Text>
+        <Box backgroundColor="$primary500" px="$2" py="$1" borderRadius="$full">
+          <Text color="$white" fontSize="$xs" fontWeight="$bold" testID={`goal-badge-${goal.type}`}>{typeLabel[goal.type]}</Text>
+        </Box>
+      </HStack>
+        <Text color="$textLight400" $dark-color="$textDark400" fontSize="$xs" mb="$2">Status: {renderStatus(goal)}</Text>
 
       {isStreak ? (
-        <View style={styles.streakContainer}>
+        <VStack space="sm">
           {progress?.streak ? (
             <>
-              <View style={styles.streakProgress}>
-                <Text style={[styles.streakNumbers, { color: theme.darkText }]}>
+            <VStack space="sm">
+                <Text color="$textLight900" $dark-color="$textDark100" fontSize="$md" fontWeight="$bold">
                   {progress.streak.current}/{progress.streak.target} days
                 </Text>
-                <View style={[styles.streakBar, { backgroundColor: theme.border }]}>
-                  <View 
-                    style={[
-                      styles.streakFill, 
-                      { 
-                        width: `${Math.min(100, (progress.streak.current / progress.streak.target) * 100)}%`,
-                        backgroundColor: getStreakColor(progress.streak.current, progress.streak.target, theme)
-                      }
-                    ]} 
+                <Box h={6} backgroundColor="$borderLight300" $dark-backgroundColor="$borderDark700" borderRadius="$sm" overflow="hidden">
+                  <Box 
+                    h="100%"
+                    w={`${Math.min(100, (progress.streak.current / progress.streak.target) * 100)}%`}
+                    backgroundColor={getStreakColor(progress.streak.current, progress.streak.target, theme)}
+                    borderRadius="$sm"
                   />
-                </View>
-              </View>
-              <Text style={[styles.streakStatus, { color: getStreakStatusColor(progress.streak.current, progress.streak.target, theme) }]}>
+                </Box>
+              </VStack>
+              <Text color={getStreakStatusColor(progress.streak.current, progress.streak.target, theme)} fontSize="$xs" fontWeight="$medium">
                 {getStreakStatusText(progress.streak.current, progress.streak.target)}
               </Text>
             </>
           ) : (
-            <Text style={[styles.streakText, { color: theme.lightText }]}>—</Text>
+            <Text color="$textLight400" $dark-color="$textDark400" fontSize="$sm" fontWeight="$semibold">—</Text>
           )}
-        </View>
+        </VStack>
       ) : (
-        <View style={styles.numericContainer}>
-          <View style={styles.numericProgress}>
-            <Text style={[styles.progressText, { color: theme.darkText }]}>
-              {renderNumericProgress(goal, progress)}
-            </Text>
-            <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-              <View style={[
-                styles.progressFill, 
-                { 
-                  width: `${percent}%`, 
-                  backgroundColor: getNumericProgressColor(percent, theme)
-                }
-              ]} />
-            </View>
-          </View>
-          {progress?.trend && progress.trend.length > 0 && (
-            <Text style={[styles.trendText, { color: theme.lightText }]}>
-              {renderTrendText(progress.trend)}
-            </Text>
-          )}
-        </View>
+        <VStack space="sm">
+          <VStack space="sm">
+              <Text color="$textLight900" $dark-color="$textDark100" fontSize="$sm" fontWeight="$semibold">
+                {renderNumericProgress(goal, progress)}
+              </Text>
+              <Box h={8} backgroundColor="$borderLight300" $dark-backgroundColor="$borderDark700" borderRadius="$sm" overflow="hidden">
+                <Box 
+                  h="100%"
+                  w={`${percent}%`}
+                  backgroundColor={getNumericProgressColor(percent, theme)}
+                  borderRadius="$sm"
+                />
+              </Box>
+            </VStack>
+            {progress?.trend && progress.trend.length > 0 && (
+              <Text color="$textLight400" $dark-color="$textDark400" fontSize="$xs" fontStyle="italic">
+                {renderTrendText(progress.trend)}
+              </Text>
+            )}
+        </VStack>
       )}
 
       {!!progress?.label && (
-        <Text style={[styles.meta, { color: theme.lightText }]}>{progress.label}</Text>
+        <Text color="$textLight400" $dark-color="$textDark400" fontSize="$xs" mt="$2">{progress.label}</Text>
       )}
-    </View>
+    </Card>
   );
 }
 

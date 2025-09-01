@@ -1,41 +1,17 @@
 import { Tabs, useRouter } from "expo-router";
-import { LayoutDashboard, Plus, User, Settings, History } from "lucide-react-native";
+import { LayoutDashboard, User, Settings, History } from "lucide-react-native";
 import React, { useState } from "react";
-import { View, StyleSheet, Pressable, Alert } from "react-native";
+import { View, StyleSheet, Alert } from "react-native";
 
 import Colors from "@/constants/colors";
 import { useUser } from "@/store/user-store";
-import FoodLogPopover from "@/app/components/FoodLogPopover";
+import LogFoodOverlayModal from "@/app/components/LogFoodOverlayModal";
 import TDEEActionModal from "@/app/components/TDEEActionModal";
+import FloatingActionButton from "@/app/components/FloatingActionButton";
 import type { FoodAnalysisResult } from "@/services/foodAnalysis";
 
 export default function TabLayout() {
   const router = useRouter();
-  const styles = StyleSheet.create({
-    addButtonContainer: {
-      position: 'absolute',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: 120,
-      width: 120,
-      top: -30,
-      left: '50%',
-      marginLeft: -60, // Half of the width to center it
-      zIndex: 10,
-    },
-    addButton: {
-      height: 89.6,
-      width: 89.6,
-      borderRadius: 56,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 6,
-      elevation: 8,
-    },
-  });
   const { colorScheme } = useUser();
   const isDarkMode = colorScheme === 'dark';
   const theme = isDarkMode ? Colors.dark : Colors.light;
@@ -105,23 +81,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="log-food"
-        options={{
-          title: "",
-          tabBarIcon: () => (
-            <Pressable 
-              style={styles.addButtonContainer}
-              onPress={() => setShowActionModal(true)}
-            >
-              <View style={[styles.addButton, { backgroundColor: theme.tint, shadowColor: theme.tint + '80' }]}>
-                <Plus size={32} color="white" />
-              </View>
-            </Pressable>
-          ),
-          tabBarItemStyle: { height: 60 }
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
@@ -137,6 +96,11 @@ export default function TabLayout() {
       />
     </Tabs>
     
+    <FloatingActionButton
+      onPress={() => setShowActionModal(true)}
+      visible={true}
+    />
+    
     <TDEEActionModal
       visible={showActionModal}
       onClose={() => setShowActionModal(false)}
@@ -144,7 +108,7 @@ export default function TabLayout() {
       onCalculateTDEE={handleCalculateTDEE}
     />
     
-    <FoodLogPopover
+    <LogFoodOverlayModal
       visible={showFoodLog}
       onClose={() => setShowFoodLog(false)}
       onLogFood={handleLogFood}

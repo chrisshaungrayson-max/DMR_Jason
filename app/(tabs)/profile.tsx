@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Modal, Pressable, ScrollView, Switch, Alert, Platform, Image } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, TextInput, Modal, ScrollView, Switch, Alert, Platform, Image } from 'react-native';
+import { Text, Heading, Pressable, Box, HStack } from '@gluestack-ui/themed';
 import React, { useState, useMemo } from 'react';
 import { useUser } from '@/store/user-store';
 import { useGoals } from '@/store/goals-store';
@@ -280,12 +281,12 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.profileHeader}>
-        <View style={styles.avatarContainer}>
+      <Box style={styles.profileHeader}>
+        <Box style={styles.avatarContainer}>
           {user.profilePicture ? (
             <Image source={{ uri: user.profilePicture }} style={styles.avatarImage} />
           ) : (
-            <View style={styles.avatar}>
+            <Box style={styles.avatar}>
               <Text style={styles.avatarText}>
                 {(user.name || 'J D')
                   .split(' ')
@@ -294,9 +295,9 @@ export default function ProfileScreen() {
                   .slice(0, 2)
                   .toUpperCase()}
               </Text>
-            </View>
+            </Box>
           )}
-        </View>
+        </Box>
 
         <TouchableOpacity onPress={updatePhoto} style={styles.updatePhotoButton}>
           <Text style={styles.updatePhotoText}>Update Photo</Text>
@@ -309,12 +310,12 @@ export default function ProfileScreen() {
         >
           <Text style={styles.editProfileText}>Edit Profile</Text>
         </TouchableOpacity>
-      </View>
+      </Box>
 
       {/* Goal Management */}
-      <View style={styles.infoSection}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.sectionTitle}>Goal Management</Text>
+      <Box style={styles.infoSection}>
+        <HStack space="sm" alignItems="center">
+          <Heading size="lg" color="$textLight0" $dark-color="$textDark0" mb="$3">Goal Management</Heading>
           <TouchableOpacity
             onPress={onOpenCreate}
             style={[styles.refreshGoalsButton, { backgroundColor: Colors.light.darkText }]} 
@@ -325,73 +326,73 @@ export default function ProfileScreen() {
           > 
             <Text style={styles.refreshGoalsText}>{strings.profile.goal.openCreateLabel}</Text>
           </TouchableOpacity>
-        </View>
-        <View style={styles.noticeBox}>
+        </HStack>
+        <Box style={styles.noticeBox}>
           <Text style={styles.noticeTitle}>{strings.profile.notices.headsUpTitle}</Text>
           <Text style={styles.noticeText}>{strings.profile.notices.headsUpBody}</Text>
-        </View>
+        </Box>
         {goalsLoading ? (
           <Text style={styles.infoValue}>Loading goals…</Text>
         ) : goalsError ? (
           <Text style={[styles.infoValue, { color: 'crimson' }]}>{goalsError}</Text>
         ) : (
           <>
-            <View style={styles.infoRow}>
+            <Box style={styles.infoRow}>
               <Text style={styles.infoLabel}>Active Goals</Text>
               <Text style={styles.infoValue}>{goals.length}</Text>
-            </View>
-            <View style={styles.infoRow}>
+            </Box>
+            <Box style={styles.infoRow}>
               <Text style={styles.infoLabel}>Archived Goals</Text>
               <Text style={styles.infoValue}>{archived.length}</Text>
-            </View>
+            </Box>
             {goals.length > 0 && (
-              <View style={{ marginTop: 12 }}>
+              <Box style={{ marginTop: 12 }}>
                 <Text style={[styles.infoLabel, { marginBottom: 8 }]}>Top Goals</Text>
                 {topNActive(3).map((g) => (
-                  <View key={g.id} style={styles.goalRow}>
+                  <Box key={g.id} style={styles.goalRow}>
                     <Text style={styles.goalTitle} testID={`goal-title-${g.type}`}>{g.type.replaceAll('_', ' ')}</Text>
                     <Text style={styles.goalMeta}>From {g.start_date} to {g.end_date || '—'}</Text>
-                    <View style={styles.goalActionsRow}>
+                    <Box style={styles.goalActionsRow}>
                       <TouchableOpacity onPress={() => deactivate(g.id)} style={styles.goalActionButton}>
                         <Text style={styles.goalActionText}>Deactivate</Text>
                       </TouchableOpacity>
-                    </View>
-                  </View>
+                    </Box>
+                  </Box>
                 ))}
-              </View>
+              </Box>
             )}
 
             {/* Active goals list with Deactivate */}
             {goals.length > 0 && (
-              <View style={{ marginTop: 12 }}>
+              <Box style={{ marginTop: 12 }}>
                 <Text style={[styles.infoLabel, { marginBottom: 8 }]}>Active</Text>
                 {goals.map((g) => (
-                  <View key={g.id} style={styles.goalRow}>
-                    <View style={{ flex: 1 }}>
+                  <Box key={g.id} style={styles.goalRow}>
+                    <Box style={{ flex: 1 }}>
                       <Text style={styles.goalTitle} testID={`goal-title-${g.type}`}>{g.type.replaceAll('_', ' ')}</Text>
                       <Text style={styles.goalMeta}>From {g.start_date} to {g.end_date || '—'}</Text>
-                    </View>
-                    <View style={styles.goalActionsRow}>
+                    </Box>
+                    <Box style={styles.goalActionsRow}>
                       <TouchableOpacity onPress={() => deactivate(g.id)} style={styles.goalActionButton}>
                         <Text style={styles.goalActionText}>Deactivate</Text>
                       </TouchableOpacity>
-                    </View>
-                  </View>
+                    </Box>
+                  </Box>
                 ))}
-              </View>
+              </Box>
             )}
 
             {/* Archived goals list with Activate/Delete */}
             {archived.length > 0 && (
-              <View style={{ marginTop: 12 }}>
+              <Box style={{ marginTop: 12 }}>
                 <Text style={[styles.infoLabel, { marginBottom: 8 }]}>Archived</Text>
                 {archived.map((g) => (
-                  <View key={g.id} style={styles.goalRow}>
-                    <View style={{ flex: 1 }}>
+                  <Box key={g.id} style={styles.goalRow}>
+                    <Box style={{ flex: 1 }}>
                       <Text style={styles.goalTitle}>{g.type.replaceAll('_', ' ')}</Text>
                       <Text style={styles.goalMeta}>Ended {g.end_date || '—'}</Text>
-                    </View>
-                    <View style={styles.goalActionsRow}>
+                    </Box>
+                    <Box style={styles.goalActionsRow}>
                       <TouchableOpacity onPress={() => setActive(g.id)} style={styles.goalActionButton}>
                         <Text style={styles.goalActionText}>Activate</Text>
                       </TouchableOpacity>
@@ -406,10 +407,10 @@ export default function ProfileScreen() {
                       >
                         <Text style={[styles.goalActionText, { color: '#fff' }]}>Delete</Text>
                       </TouchableOpacity>
-                    </View>
-                  </View>
+                    </Box>
+                  </Box>
                 ))}
-              </View>
+              </Box>
             )}
 
             <TouchableOpacity style={styles.refreshGoalsButton} onPress={() => refreshProgress()}>
@@ -418,7 +419,7 @@ export default function ProfileScreen() {
             <Text style={styles.goalHint}>Tip: Goals are not editable. Delete and recreate to change details.</Text>
           </>
         )}
-      </View>
+      </Box>
 
       {/* Create Goal Modal */}
       <Modal
@@ -427,9 +428,9 @@ export default function ProfileScreen() {
         visible={createVisible}
         onRequestClose={() => setCreateVisible(false)}
       >
-        <View style={styles.fullModalOverlay}>
-          <View style={[styles.fullModalContainer, { backgroundColor: theme.cardBackground }]}> 
-            <View style={styles.modalHeader}>
+        <Box style={styles.fullModalOverlay}>
+          <Box style={[styles.fullModalContainer, { backgroundColor: theme.cardBackground }]}> 
+            <Box style={styles.modalHeader}>
               <Text style={styles.fullModalTitle}>{strings.profile.goal.modalTitle}</Text>
               <Pressable
                 style={styles.closeButton}
@@ -440,11 +441,11 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.closeButtonText}>✕</Text>
               </Pressable>
-            </View>
+            </Box>
 
             <ScrollView style={styles.formScrollView}>
               {createError && (
-                <View
+                <Box
                   style={[
                     styles.noticeBox,
                     { borderColor: 'crimson', backgroundColor: isDarkMode ? '#43131a' : '#ffe8ea' },
@@ -455,12 +456,12 @@ export default function ProfileScreen() {
                   <Text style={[styles.noticeText, { color: isDarkMode ? '#ffd1d6' : '#7a1a22' }]}>
                     {createError}
                   </Text>
-                </View>
+                </Box>
               )}
-              <View style={styles.formSection}>
+              <Box style={styles.formSection}>
                 <Text style={styles.formSectionTitle}>{strings.profile.goal.basics}</Text>
                 <Text style={styles.formLabel}>{strings.profile.goal.type}</Text>
-                <View style={styles.pickerContainer}>
+                <Box style={styles.pickerContainer}>
                   {(['calorie_streak','protein_streak','body_fat','weight','lean_mass_gain'] as GoalType[]).map((t) => (
                     <TouchableOpacity
                       key={t}
@@ -475,23 +476,23 @@ export default function ProfileScreen() {
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </Box>
                 {hasActiveSameType && (
-                  <View
+                  <Box
                     style={[styles.noticeBox, { backgroundColor: isDarkMode ? '#2a2a2a' : '#f7f7f7' }]} 
                     accessibilityRole="alert"
                   > 
                     <Text style={[styles.noticeTitle, { color: Colors.light.darkText }]}>{strings.profile.goal.conflictTitle}</Text>
                     <Text style={styles.noticeText}>{strings.profile.goal.conflictBody}</Text>
-                  </View>
+                  </Box>
                 )}
 
-                <View style={[styles.formField, { marginTop: 12 }]}>
+                <Box style={[styles.formField, { marginTop: 12 }]}>
                   <Text style={styles.formLabel}>{strings.profile.goal.startDate}</Text>
                   <Text style={styles.infoValue}>{startDateISO} {strings.profile.goal.startDateAuto}</Text>
-                </View>
+                </Box>
 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>{strings.profile.goal.endDate}</Text>
                   <TouchableOpacity
                     onPress={() => setEndPickerVisible(true)}
@@ -502,96 +503,96 @@ export default function ProfileScreen() {
                   >
                     <Text style={{ color: Colors.light.darkText }}>{endDateISO}</Text>
                   </TouchableOpacity>
-                </View>
-              </View>
+                </Box>
+              </Box>
 
               {goalType === 'body_fat' && (
-                <View style={styles.formSection}>
+                <Box style={styles.formSection}>
                   <Text style={styles.formSectionTitle}>Body Fat Goal</Text>
-                  <View style={styles.formField}>
+                  <Box style={styles.formField}>
                     <Text style={styles.formLabel}>Target %</Text>
                     <TextInput value={bodyFatTargetPct} onChangeText={setBodyFatTargetPct} keyboardType="numeric" style={styles.formInput} />
-                  </View>
-                </View>
+                  </Box>
+                </Box>
               )}
 
               {goalType === 'weight' && (
-                <View style={styles.formSection}>
+                <Box style={styles.formSection}>
                   <Text style={styles.formSectionTitle}>Weight Goal</Text>
-                  <View style={styles.formField}>
+                  <Box style={styles.formField}>
                     <Text style={styles.formLabel}>Target Weight (kg)</Text>
                     <TextInput value={weightTargetKg} onChangeText={setWeightTargetKg} keyboardType="numeric" style={styles.formInput} />
-                  </View>
-                  <View style={styles.formField}>
+                  </Box>
+                  <Box style={styles.formField}>
                     <Text style={styles.formLabel}>Direction</Text>
-                    <View style={styles.pickerContainer}>
+                    <Box style={styles.pickerContainer}>
                       {(['down','up'] as const).map((d) => (
                         <TouchableOpacity key={d} style={[styles.activityButton, weightDirection === d && styles.activityButtonSelected]} onPress={() => setWeightDirection(d)}>
                           <Text style={[styles.activityButtonText, weightDirection === d && styles.activityTextSelected]}>{d === 'down' ? 'Lose' : 'Gain'}</Text>
                         </TouchableOpacity>
                       ))}
-                    </View>
-                  </View>
-                </View>
+                    </Box>
+                  </Box>
+                </Box>
               )}
 
               {goalType === 'lean_mass_gain' && (
-                <View style={styles.formSection}>
+                <Box style={styles.formSection}>
                   <Text style={styles.formSectionTitle}>Lean Mass Gain</Text>
-                  <View style={styles.formField}>
+                  <Box style={styles.formField}>
                     <Text style={styles.formLabel}>Target Gain (kg)</Text>
                     <TextInput value={leanGainKg} onChangeText={setLeanGainKg} keyboardType="numeric" style={styles.formInput} />
-                  </View>
-                </View>
+                  </Box>
+                </Box>
               )}
 
               {goalType === 'calorie_streak' && (
-                <View style={styles.formSection}>
+                <Box style={styles.formSection}>
                   <Text style={styles.formSectionTitle}>Calorie Streak</Text>
-                  <View style={styles.formField}>
+                  <Box style={styles.formField}>
                     <Text style={styles.formLabel}>Target Days</Text>
                     <TextInput value={calStreakDays} onChangeText={setCalStreakDays} keyboardType="numeric" style={styles.formInput} />
-                  </View>
-                  <View style={styles.formField}>
+                  </Box>
+                  <Box style={styles.formField}>
                     <Text style={styles.formLabel}>Basis</Text>
-                    <View style={styles.pickerContainer}>
+                    <Box style={styles.pickerContainer}>
                       {(['recommended','custom'] as const).map((b) => (
                         <TouchableOpacity key={b} style={[styles.activityButton, calBasis === b && styles.activityButtonSelected]} onPress={() => setCalBasis(b)}>
                           <Text style={[styles.activityButtonText, calBasis === b && styles.activityTextSelected]}>{b}</Text>
                         </TouchableOpacity>
                       ))}
-                    </View>
-                  </View>
+                    </Box>
+                  </Box>
                   {calBasis === 'custom' && (
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      <View style={[styles.formField, { flex: 1 }]}>
+                    <HStack space="sm" alignItems="center">
+                      <Box style={[styles.formField, { flex: 1 }]}>
                         <Text style={styles.formLabel}>Min Calories</Text>
                         <TextInput value={calMin} onChangeText={setCalMin} keyboardType="numeric" style={styles.formInput} />
-                      </View>
-                      <View style={[styles.formField, { flex: 1 }]}>
+                      </Box>
+                      <Box style={[styles.formField, { flex: 1 }]}>
                         <Text style={styles.formLabel}>Max Calories</Text>
                         <TextInput value={calMax} onChangeText={setCalMax} keyboardType="numeric" style={styles.formInput} />
-                      </View>
-                    </View>
+                      </Box>
+                    </HStack>
                   )}
-                </View>
+                </Box>
               )}
 
               {goalType === 'protein_streak' && (
-                <View style={styles.formSection}>
+                <Box style={styles.formSection}>
                   <Text style={styles.formSectionTitle}>Protein Streak</Text>
-                  <View style={styles.formField}>
+                  <Box style={styles.formField}>
                     <Text style={styles.formLabel}>Grams / Day</Text>
                     <TextInput value={proteinPerDay} onChangeText={setProteinPerDay} keyboardType="numeric" style={styles.formInput} />
-                  </View>
-                  <View style={styles.formField}>
+                  </Box>
+                  <Box style={styles.formField}>
                     <Text style={styles.formLabel}>Target Days</Text>
                     <TextInput value={proteinDays} onChangeText={setProteinDays} keyboardType="numeric" style={styles.formInput} />
-                  </View>
-                </View>
+                  </Box>
+                </Box>
               )}
 
-              <View style={styles.formActions}>
+              <Box style={styles.formActions}>
                 <TouchableOpacity
                   onPress={onConfirmCreate}
                   disabled={creatingGoal || hasActiveSameType}
@@ -608,10 +609,10 @@ export default function ProfileScreen() {
                     {creatingGoal ? strings.profile.goal.createCreating : hasActiveSameType ? strings.profile.goal.createResolveConflict : strings.profile.goal.createAction}
                   </Text>
                 </TouchableOpacity>
-              </View>
+              </Box>
             </ScrollView>
-          </View>
-        </View>
+          </Box>
+        </Box>
       </Modal>
 
       <CustomDatePicker
@@ -623,24 +624,24 @@ export default function ProfileScreen() {
       />
       
       
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
+      <Box style={styles.statsContainer}>
+        <Box style={styles.statItem}>
           <Text style={styles.statValue}>28</Text>
           <Text style={styles.statLabel}>Days Streak</Text>
-        </View>
-        <View style={styles.statItem}>
+        </Box>
+        <Box style={styles.statItem}>
           <Text style={styles.statValue}>{tdee}</Text>
           <Text style={styles.statLabel}>TDEE</Text>
-        </View>
-        <View style={styles.statItem}>
+        </Box>
+        <Box style={styles.statItem}>
           <Text style={styles.statValue}>2350</Text>
           <Text style={styles.statLabel}>Avg. Calories</Text>
-        </View>
-      </View>
+        </Box>
+      </Box>
       
-      <View style={styles.infoSection}>
+      <Box style={styles.infoSection}>
         <Text style={styles.sectionTitle}>Personal Information</Text>
-        <View style={styles.infoRow}>
+        <Box style={styles.infoRow}>
           <Text style={styles.infoLabel}>Height</Text>
           <Text style={styles.infoValue}>
             {user.useMetricUnits ? `${user.height} cm` : user.height}
@@ -651,8 +652,8 @@ export default function ProfileScreen() {
             >
               <Text style={styles.editIconText}>✎</Text>
             </TouchableOpacity>
-        </View>
-        <View style={styles.infoRow}>
+        </Box>
+        <Box style={styles.infoRow}>
           <Text style={styles.infoLabel}>Weight</Text>
           <Text style={styles.infoValue}>
             {user.useMetricUnits ? `${user.weight} kg` : user.weight}
@@ -663,8 +664,8 @@ export default function ProfileScreen() {
             >
               <Text style={styles.editIconText}>✎</Text>
             </TouchableOpacity>
-        </View>
-        <View style={styles.infoRow}>
+        </Box>
+        <Box style={styles.infoRow}>
           <Text style={styles.infoLabel}>Age</Text>
           <Text style={styles.infoValue}>{user.age}</Text>
             <TouchableOpacity 
@@ -673,8 +674,8 @@ export default function ProfileScreen() {
             >
               <Text style={styles.editIconText}>✎</Text>
             </TouchableOpacity>
-        </View>
-        <View style={styles.infoRow}>
+        </Box>
+        <Box style={styles.infoRow}>
           <Text style={styles.infoLabel}>Sex</Text>
           <Text style={styles.infoValue}>{user.sex.charAt(0).toUpperCase() + user.sex.slice(1)}</Text>
             <TouchableOpacity 
@@ -683,8 +684,8 @@ export default function ProfileScreen() {
             >
               <Text style={styles.editIconText}>✎</Text>
             </TouchableOpacity>
-        </View>
-        <View style={styles.infoRow}>
+        </Box>
+        <Box style={styles.infoRow}>
           <Text style={styles.infoLabel}>Activity Level</Text>
           <Text style={styles.infoValue}>{user.activityLevel ? user.activityLevel.charAt(0).toUpperCase() + user.activityLevel.slice(1) : 'Moderate'}</Text>
             <TouchableOpacity 
@@ -693,12 +694,12 @@ export default function ProfileScreen() {
             >
               <Text style={styles.editIconText}>✎</Text>
             </TouchableOpacity>
-        </View>
-        <View style={styles.infoRow}>
+        </Box>
+        <Box style={styles.infoRow}>
           <Text style={styles.infoLabel}>Daily Energy Needs</Text>
           <Text style={styles.infoValue}>{tdee} calories</Text>
-        </View>
-      </View>
+        </Box>
+      </Box>
           
       {/* Single field edit modal */}
       <Modal
@@ -707,11 +708,11 @@ export default function ProfileScreen() {
         visible={editModalVisible}
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: theme.cardBackground }]}>
+        <Box style={styles.modalOverlay}>
+          <Box style={[styles.modalContainer, { backgroundColor: theme.cardBackground }]}>
             <Text style={styles.modalTitle}>Edit {editingField}</Text>
             {editingField === 'activityLevel' ? (
-              <View style={styles.pickerContainer}>
+              <Box style={styles.pickerContainer}>
                 <TouchableOpacity 
                   style={[styles.activityButton, editValue === 'sedentary' && styles.activityButtonSelected]}
                   onPress={() => setEditValue('sedentary')}
@@ -742,9 +743,9 @@ export default function ProfileScreen() {
                 >
                   <Text style={[styles.activityButtonText, editValue === 'athlete' && styles.activityTextSelected]}>Athlete</Text>
                 </TouchableOpacity>
-              </View>
+              </Box>
             ) : editingField === 'sex' ? (
-              <View style={styles.radioGroup}>
+              <Box style={styles.radioGroup}>
                 <TouchableOpacity 
                   style={[styles.radioButton, editValue === 'male' && styles.radioButtonSelected]}
                   onPress={() => setEditValue('male')}
@@ -763,7 +764,7 @@ export default function ProfileScreen() {
                 >
                   <Text style={[styles.radioText, editValue === 'other' && styles.radioTextSelected]}>Other</Text>
                 </TouchableOpacity>
-              </View>
+              </Box>
             ) : (
               <TextInput
                 style={styles.modalInput}
@@ -773,12 +774,12 @@ export default function ProfileScreen() {
                 keyboardType={editingField === 'age' ? 'number-pad' : 'default'}
               />
             )}
-            <View style={styles.modalButtons}>
+            <Box style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setEditModalVisible(false)}
               >
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text color="$white" fontSize="$md" fontWeight="$semibold">Cancel</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalButton, styles.saveButton]}
@@ -786,9 +787,9 @@ export default function ProfileScreen() {
               >
                 <Text style={[styles.buttonText, styles.saveButtonText]}>Save</Text>
               </Pressable>
-            </View>
-          </View>
-        </View>
+            </Box>
+          </Box>
+        </Box>
       </Modal>
 
       {/* Full profile edit modal */}
@@ -798,9 +799,9 @@ export default function ProfileScreen() {
         visible={editProfileVisible}
         onRequestClose={() => setEditProfileVisible(false)}
       >
-        <View style={styles.fullModalOverlay}>
-          <View style={[styles.fullModalContainer, { backgroundColor: theme.cardBackground }]}>
-            <View style={styles.modalHeader}>
+        <Box style={styles.fullModalOverlay}>
+          <Box style={[styles.fullModalContainer, { backgroundColor: theme.cardBackground }]}>
+            <Box style={styles.modalHeader}>
               <Text style={styles.fullModalTitle}>Edit Profile</Text>
               <Pressable 
                 style={styles.closeButton}
@@ -808,13 +809,13 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.closeButtonText}>✕</Text>
               </Pressable>
-            </View>
+            </Box>
 
             <ScrollView style={styles.formScrollView}>
-              <View style={styles.formSection}>
+              <Box style={styles.formSection}>
                 <Text style={styles.formSectionTitle}>Personal Information</Text>
                 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>Name</Text>
                   <TextInput
                     style={styles.formInput}
@@ -822,9 +823,9 @@ export default function ProfileScreen() {
                     onChangeText={(value) => handleFormChange('name', value)}
                     placeholder="Your name"
                   />
-                </View>
+                </Box>
 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>Email</Text>
                   <TextInput
                     style={styles.formInput}
@@ -833,9 +834,9 @@ export default function ProfileScreen() {
                     placeholder="Your email"
                     keyboardType="email-address"
                   />
-                </View>
+                </Box>
 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>Age</Text>
                   <TextInput
                     style={styles.formInput}
@@ -844,11 +845,11 @@ export default function ProfileScreen() {
                     placeholder="Your age"
                     keyboardType="number-pad"
                   />
-                </View>
+                </Box>
 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>Sex</Text>
-                  <View style={styles.radioGroup}>
+                  <Box style={styles.radioGroup}>
                     <TouchableOpacity 
                       style={[styles.radioButton, formData.sex === 'male' && styles.radioButtonSelected]}
                       onPress={() => handleFormChange('sex', 'male')}
@@ -867,10 +868,10 @@ export default function ProfileScreen() {
                     >
                       <Text style={[styles.radioText, formData.sex === 'other' && styles.radioTextSelected]}>Other</Text>
                     </TouchableOpacity>
-                  </View>
-                </View>
+                  </Box>
+                </Box>
 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>Phone Number (optional)</Text>
                   <TextInput
                     style={styles.formInput}
@@ -879,13 +880,13 @@ export default function ProfileScreen() {
                     placeholder="Your phone number"
                     keyboardType="phone-pad"
                   />
-                </View>
-              </View>
+                </Box>
+              </Box>
 
-              <View style={styles.formSection}>
+              <Box style={styles.formSection}>
                 <Text style={styles.formSectionTitle}>Body Measurements</Text>
                 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>Height</Text>
                   <TextInput
                     style={styles.formInput}
@@ -894,9 +895,9 @@ export default function ProfileScreen() {
                     placeholder={formData.useMetricUnits ? "Height in cm" : "Height in ft/in"}
                     keyboardType={formData.useMetricUnits ? 'numeric' : 'default'}
                   />
-                </View>
+                </Box>
 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>Weight</Text>
                   <TextInput
                     style={styles.formInput}
@@ -905,11 +906,11 @@ export default function ProfileScreen() {
                     placeholder={formData.useMetricUnits ? "Weight in kg" : "Weight in lbs"}
                     keyboardType='numeric'
                   />
-                </View>
+                </Box>
 
-                <View style={styles.formField}>
+                <Box style={styles.formField}>
                   <Text style={styles.formLabel}>Activity Level</Text>
-                  <View style={styles.pickerContainer}>
+                  <Box style={styles.pickerContainer}>
                     <TouchableOpacity 
                       style={[styles.activityButton, formData.activityLevel === 'sedentary' && styles.activityButtonSelected]}
                       onPress={() => handleFormChange('activityLevel', 'sedentary')}
@@ -940,22 +941,22 @@ export default function ProfileScreen() {
                     >
                       <Text style={[styles.activityButtonText, formData.activityLevel === 'athlete' && styles.activityTextSelected]}>Athlete</Text>
                     </TouchableOpacity>
-                  </View>
-                  <View style={styles.activityLevelInfo}>
+                  </Box>
+                  <Box style={styles.activityLevelInfo}>
                     <Text style={styles.activityLevelInfoText}>• Sedentary: Little or no exercise</Text>
                     <Text style={styles.activityLevelInfoText}>• Light: Light exercise 1-3 days/week</Text>
                     <Text style={styles.activityLevelInfoText}>• Moderate: Moderate exercise 3-5 days/week</Text>
                     <Text style={styles.activityLevelInfoText}>• Heavy: Heavy exercise 6-7 days/week</Text>
                     <Text style={styles.activityLevelInfoText}>• Athlete: Very heavy exercise, physical job or training twice a day</Text>
-                  </View>
-                </View>
-              </View>
+                  </Box>
+                </Box>
+              </Box>
 
-              <View style={styles.formSection}>
+              <Box style={styles.formSection}>
                 <Text style={styles.formSectionTitle}>Preferences</Text>
                 
-                <View style={styles.formField}>
-                  <View style={styles.switchRow}>
+                <Box style={styles.formField}>
+                  <Box style={styles.switchRow}>
                     <Text style={styles.formLabel}>Use Metric Units</Text>
                     <Switch
                       value={formData.useMetricUnits}
@@ -980,21 +981,21 @@ export default function ProfileScreen() {
                       trackColor={{ false: isDarkMode ? '#555' : '#767577', true: theme.lightGold }}
                       thumbColor={formData.useMetricUnits ? theme.gold : isDarkMode ? '#777' : '#f4f3f4'}
                     />
-                  </View>
-                </View>
-              </View>
+                  </Box>
+                </Box>
+              </Box>
 
-              <View style={styles.formActions}>
+              <Box style={styles.formActions}>
                 <TouchableOpacity 
                   style={styles.logoutButton}
                   onPress={handleLogout}
                 >
                   <Text style={styles.logoutButtonText}>Logout</Text>
                 </TouchableOpacity>
-              </View>
+              </Box>
             </ScrollView>
 
-            <View style={styles.formFooter}>
+            <Box style={styles.formFooter}>
               <TouchableOpacity 
                 style={styles.cancelProfileButton}
                 onPress={() => setEditProfileVisible(false)}
@@ -1007,9 +1008,9 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.saveProfileButtonText}>Save Changes</Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+            </Box>
+          </Box>
+        </Box>
       </Modal>
     </View>
   );

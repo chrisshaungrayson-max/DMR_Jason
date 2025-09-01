@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import { Text, Heading } from '@gluestack-ui/themed';
 import Colors from '@/constants/colors';
 import { useUser } from '@/store/user-store';
 

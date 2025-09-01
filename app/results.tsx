@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Share, Platform, Pressable, Image, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, ActivityIndicator, Share, Platform, Image, Alert } from 'react-native';
+import { Text, Heading, Pressable } from '@gluestack-ui/themed';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useNutritionStore } from '@/store/nutrition-store';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +14,7 @@ import { generateReportHTML } from '@/utils/pdf';
 import { loadImageAsDataUrl } from '@/utils/assets';
 import { formatDateLabel, normalizeNutritionItems } from '@/utils/report';
 import RadarChart from './components/RadarChart';
+import SegmentedTabs from './components/SegmentedTabs';
 import { useUser } from '@/store/user-store';
 
 export default function ResultsScreen() {
@@ -342,32 +344,19 @@ export default function ResultsScreen() {
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => router.replace('/')}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
-        </TouchableOpacity>
+        <Text color="$error500" fontSize="$sm">{error}</Text>
       </View>
     );
   }
 
   const totals = calculateTotals();
   const calorieStatus = getCalorieStatus(totals.calories);
-  const StatusIcon = calorieStatus.icon;
+  const StatusIcon = totals.calories > 2500 ? TrendingUp : totals.calories < 1500 ? TrendingDown : Check;
 
-  const renderTabContent = () => {
+  const renderContent = () => {
     if (activeTab === 'list') {
       return (
         <>
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoItem}>Name: {userInfo.name}</Text>
-            <Text style={styles.infoItem}>Goal: Daily Intake Overview</Text>
-            <Text style={styles.infoItem}>Method: AI Estimation</Text>
-          </View>
-          
-          <Text style={styles.description}>
-            Here is a detailed breakdown of your food and drink intake for the day, along with estimated macronutrient values.
-          </Text>
-          
           <View style={styles.tableContainer}>
             <View style={styles.tableHeader}>
               <Text style={[styles.tableHeaderCell, styles.itemColumn]}>Item</Text>
@@ -507,42 +496,22 @@ export default function ResultsScreen() {
           </View>
         </View>
         
-        <View style={styles.tabContainer}>
-          <Pressable 
-            style={({ pressed }) => [
-              styles.tab, 
-              activeTab === 'list' && styles.activeTab,
-              pressed && Platform.OS === 'ios' && styles.tabPressed
-            ]}
-            onPress={async () => {
-              if (Platform.OS === 'ios') {
-                await Haptics.selectionAsync();
-              }
-              setActiveTab('list');
-            }}
-            testID="list-tab"
-          >
-            <Text style={[styles.tabText, activeTab === 'list' && styles.activeTabText]}>List</Text>
-          </Pressable>
-          <Pressable 
-            style={({ pressed }) => [
-              styles.tab, 
-              activeTab === 'analytics' && styles.activeTab,
-              pressed && Platform.OS === 'ios' && styles.tabPressed
-            ]}
-            onPress={async () => {
-              if (Platform.OS === 'ios') {
-                await Haptics.selectionAsync();
-              }
-              setActiveTab('analytics');
-            }}
-            testID="analytics-tab"
-          >
-            <Text style={[styles.tabText, activeTab === 'analytics' && styles.activeTabText]}>Analytics</Text>
-          </Pressable>
-        </View>
+        <SegmentedTabs
+          options={[
+            { label: 'List', value: 'list', testID: 'list-tab' },
+            { label: 'Analytics', value: 'analytics', testID: 'analytics-tab' },
+          ]}
+          value={activeTab}
+          onChange={(v) => setActiveTab(v as 'list' | 'analytics')}
+          containerStyle={styles.tabContainer}
+          activeColor="#BBA46E"
+          activeTextColor="#FFFFFF"
+          inactiveTextColor="#666666"
+          trackColor={Platform.OS === 'ios' ? '#e5e5ea' : '#f0f0f0'}
+          borderRadius={Platform.OS === 'ios' ? 12 : 8}
+        />
         
-        {renderTabContent()}
+        {renderContent()}
         
         <View style={styles.buttonContainer}>
           <Pressable 

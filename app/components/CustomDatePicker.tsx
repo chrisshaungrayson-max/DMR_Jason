@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Modal } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, Modal } from 'react-native';
+import { Text, Heading } from '@gluestack-ui/themed';
 import { Picker } from '@react-native-picker/picker';
 import { format, addYears, subYears, isSameDay } from 'date-fns';
 

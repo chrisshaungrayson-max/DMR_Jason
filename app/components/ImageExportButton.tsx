@@ -4,15 +4,11 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { 
-  TouchableOpacity, 
-  Text, 
-  View, 
-  ActivityIndicator, 
-  StyleSheet,
   Alert,
   InteractionManager,
   Platform
 } from 'react-native';
+import { Button, ButtonText, HStack, Spinner } from '@gluestack-ui/themed';
 import { Download } from 'lucide-react-native';
 import { ImageExportButtonProps, ExportState } from '@/types/image-export';
 import { exportViewAsImage, getExportPerformanceStats, getDevicePerformanceTier, checkPhotoLibraryPermission, requestPhotoLibraryPermission } from '@/utils/tdee-image-export';
@@ -253,67 +249,40 @@ export function ImageExportButton({
   }, [viewRef, captureOptions, saveOptions, onExportStart, onExportSuccess, onExportError, onBeforeCapture, onAfterCapture]);
 
   return (
-    <TouchableOpacity
-      style={[styles.button, style, isDisabled && styles.disabled]}
+    <Button
       onPress={handleExport}
-      disabled={isDisabled}
+      isDisabled={isDisabled}
+      bg="$primary500"
+      $disabled-bg="$backgroundLight300"
+      $disabled-opacity={0.6}
+      px="$4"
+      py="$3"
+      borderRadius="$md"
+      minWidth={120}
+      style={style}
       accessibilityLabel={title}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled }}
     >
-      <View style={styles.content}>
+      <HStack space="sm" alignItems="center">
         {isLoading ? (
-          <ActivityIndicator 
-            size="small" 
-            color="#FFFFFF" 
-            style={styles.icon}
-          />
+          <Spinner size="small" color="$white" />
         ) : (
           <Download 
             size={16} 
-            color="#FFFFFF" 
-            style={styles.icon}
+            color="#FFFFFF"
           />
         )}
-        <Text style={[styles.text, isDisabled && styles.disabledText]}>
+        <ButtonText 
+          color="$white"
+          $disabled-color="$textLight400"
+          fontSize="$sm"
+          fontWeight="$semibold"
+        >
           {isLoading ? 'Saving...' : title}
-        </Text>
-      </View>
-    </TouchableOpacity>
+        </ButtonText>
+      </HStack>
+    </Button>
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: '#D4A574',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 120,
-  },
-  disabled: {
-    backgroundColor: '#CCCCCC',
-    opacity: 0.6,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: {
-    marginRight: 8,
-  },
-  text: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  disabledText: {
-    color: '#999999',
-  },
-});
 
 export default ImageExportButton;

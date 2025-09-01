@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Platform, TouchableOpacity, FlatList } from 'react-native';
+import { Text, Heading, Pressable, Box } from '@gluestack-ui/themed';
 import React, { useMemo } from 'react';
 import { useNutritionStore } from '@/store/nutrition-store';
 import { DailyNutritionRecord, NutritionEntry } from '@/types/nutrition';
@@ -14,7 +15,6 @@ import EmptyState from '@/app/components/EmptyState';
 import StreakHeatmap from '@/app/components/StreakHeatmap';
 import { strings } from '@/utils/strings';
 import { buildProteinCompliance, toWeeklyGrid } from '@/utils/streak';
-import { Box, Button, ButtonText } from '@gluestack-ui/themed';
 
 export default function HistoryScreen() {
   const { dailyRecords, isLoading } = useNutritionStore();
@@ -69,27 +69,27 @@ export default function HistoryScreen() {
       testID={`record-${item.date}`}
       onPress={() => router.push({ pathname: '/results-popover', params: { date: item.date } })}
     >
-      <View style={styles.recordHeader}>
+      <Box style={styles.recordHeader}>
         <Text style={[styles.dateText, { color: theme.darkText }]}>{formatDate(item.date)}</Text>
         <Text style={[styles.caloriesText, { color: theme.gold }]}>{Math.ceil(item.total.calories)} cal</Text>
-      </View>
+      </Box>
       
-      <View style={styles.macrosContainer}>
-        <View style={styles.macroItem}>
+      <Box style={styles.macrosContainer}>
+        <Box style={styles.macroItem}>
           <Text style={[styles.macroValue, { color: theme.darkText }]}>{Math.ceil(item.total.protein)}g</Text>
           <Text style={[styles.macroLabel, { color: theme.lightText }]}>Protein</Text>
-        </View>
-        <View style={styles.macroItem}>
+        </Box>
+        <Box style={styles.macroItem}>
           <Text style={[styles.macroValue, { color: theme.darkText }]}>{Math.ceil(item.total.carbs)}g</Text>
           <Text style={[styles.macroLabel, { color: theme.lightText }]}>Carbs</Text>
-        </View>
-        <View style={styles.macroItem}>
+        </Box>
+        <Box style={styles.macroItem}>
           <Text style={[styles.macroValue, { color: theme.darkText }]}>{Math.ceil(item.total.fat)}g</Text>
           <Text style={[styles.macroLabel, { color: theme.lightText }]}>Fat</Text>
-        </View>
-      </View>
+        </Box>
+      </Box>
 
-      <View style={styles.foodItemsContainer}>
+      <Box style={styles.foodItemsContainer}>
         {item.entries.map((entry: NutritionEntry, index: number) => (
           <TouchableOpacity
             key={index}
@@ -113,19 +113,19 @@ export default function HistoryScreen() {
             }}
             testID={`history-entry-${item.date}-${index}`}
           >
-            <View style={styles.entryHeader}>
+            <Box style={styles.entryHeader}>
               <Text style={[styles.foodName, { color: theme.darkText }]}>{entry.foodList}</Text>
-              <View style={[styles.mealChip, { backgroundColor: isDarkMode ? '#2e2e2e' : '#eee', borderColor: theme.gold }]}> 
+              <Box style={[styles.mealChip, { backgroundColor: isDarkMode ? '#2e2e2e' : '#eee', borderColor: theme.gold }]}> 
                 <Text style={[styles.mealChipText, { color: theme.darkText }]}>{entry.mealType.charAt(0).toUpperCase() + entry.mealType.slice(1)}</Text>
-              </View>
-            </View>
-            <View style={styles.entryMetaRow}>
+              </Box>
+            </Box>
+            <Box style={styles.entryMetaRow}>
               <Text style={[styles.foodCalories, { color: theme.lightText }]}>{Math.ceil(entry.total.calories)} cal</Text>
               <Text style={[styles.entryTime, { color: theme.lightText }]}>{new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</Text>
-            </View>
+            </Box>
           </TouchableOpacity>
         ))}
-      </View>
+      </Box>
     </TouchableOpacity>
   );
 
@@ -138,24 +138,18 @@ export default function HistoryScreen() {
         headerTintColor: theme.darkText,
       }} />
 
-      {/* Gluestack UI demo */}
-      <Box p="$4" mx="$4" my="$3" testID="gluestack-demo">
-        <Button action="primary" onPress={() => console.log('Gluestack button pressed')}>
-          <ButtonText>Gluestack UI Connected</ButtonText>
-        </Button>
-      </Box>
       {/* Analytics: Weekly Trend */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+      <Box style={{ paddingHorizontal: 16, paddingTop: 12 }}>
         <TrendLineChart
           title={chartSeries.target != null ? 'Protein Trend' : 'Calorie Trend'}
           series={chartSeries}
           metricLabel={chartSeries.target != null ? 'Protein (g avg/week)' : 'Calories (avg/week)'}
           height={220}
         />
-      </View>
+      </Box>
 
       {/* Ideal vs Actual */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+      <Box style={{ paddingHorizontal: 16, paddingTop: 8 }}>
         <IdealComparisonCard
           themeMode={isDarkMode ? 'dark' : 'light'}
           idealCalories={ideal.calories}
@@ -171,19 +165,19 @@ export default function HistoryScreen() {
           actualFat={avg.grams.fat}
           deltaFat={avg.grams.fat - ideal.grams.fat}
         />
-      </View>
+      </Box>
 
       {/* Protein Streak Heatmap */}
       {proteinHeatmapGrid && (
-        <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        <Box style={{ paddingHorizontal: 16, paddingTop: 12 }}>
           <StreakHeatmap title="Protein Streak (Last 4 Weeks)" grid={proteinHeatmapGrid} />
-        </View>
+        </Box>
       )}
       
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <Box style={styles.loadingContainer}>
           <Text style={{ color: theme.lightText }}>Loading history...</Text>
-        </View>
+        </Box>
       ) : dailyRecords.length === 0 ? (
         <EmptyState
           title={strings.empty.history.title}

@@ -10,8 +10,9 @@ import { UserContext, useUser } from "@/store/user-store";
 import { StatusBar } from "expo-status-bar";
 import { FoodsProvider } from "@/store/foods-store";
 import { GoalsContext } from "@/store/goals-store";
-import { GluestackUIProvider } from "@gluestack-ui/themed";
-import { config } from "@gluestack-ui/config";
+import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import Colors from "@/constants/colors";
+import { View } from "react-native";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -22,14 +23,21 @@ function RootLayoutNav() {
   const { colorScheme } = useUser();
 
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? Colors.dark.background : Colors.light.background }}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: colorScheme === 'dark' ? Colors.dark.background : Colors.light.background,
+          },
+        }}
+      >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="phone-verification" options={{ headerShown: false }} />
         <Stack.Screen name="results" options={{ headerShown: false }} />
       </Stack>
-    </>
+    </View>
   );
 }
 
@@ -44,11 +52,11 @@ function AppProviders() {
         <GoalsContext>
           <NutritionProvider>
             <FoodsProvider>
-              <GluestackUIProvider config={config}>
+              <ThemeProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <RootLayoutNav />
                 </GestureHandlerRootView>
-              </GluestackUIProvider>
+              </ThemeProvider>
             </FoodsProvider>
           </NutritionProvider>
         </GoalsContext>
